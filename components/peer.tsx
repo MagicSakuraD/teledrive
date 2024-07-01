@@ -27,10 +27,10 @@ const PeerPage = () => {
     newPeer.on("open", (id) => {
       setMyPeerId(id);
     });
-    0;
+
     newPeer.on("call", (call) => {
       navigator.mediaDevices
-        .getUserMedia({ video: true, audio: true })
+        .getUserMedia({ video: true, audio: false })
         .then((stream) => {
           if (myVideoRef.current) {
             myVideoRef.current.srcObject = stream;
@@ -54,7 +54,7 @@ const PeerPage = () => {
 
   const callPeer = (id: string) => {
     navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
+      .getUserMedia({ video: true, audio: false })
       .then((stream) => {
         if (myVideoRef.current) {
           myVideoRef.current.srcObject = stream;

@@ -34,7 +34,7 @@ const AsideBar = () => {
             </Link>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={5}>
-            remote drive
+            远程驾驶
           </TooltipContent>
         </Tooltip>
         <Tooltip>

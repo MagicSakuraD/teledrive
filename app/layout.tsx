@@ -28,7 +28,6 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TooltipProvider>
-            {" "}
             <div className="grid h-screen w-full pl-[56px]">
               <AsideBar />
               <div className="flex flex-col">
@@ -37,7 +36,7 @@ export default function RootLayout({
 
                   <ModeToggle />
                 </header>
-                <main className="flex overflow-auto p-4 justify-center w-full mx-auto">
+                <main className="flex overflow-auto p-4 justify-center w-full mx-auto my-auto min-h-[40rem]">
                   {children}
                 </main>
               </div>
