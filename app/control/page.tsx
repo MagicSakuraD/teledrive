@@ -146,9 +146,12 @@ const Control = () => {
         <CardContent className="p-0">
           <AspectRatio ratio={16 / 9}>
             <img
+              src="/placeholder.svg"
               ref={imgRef}
               alt="Received image Frame"
-              className="rounded-t-md"
+              width={960}
+              height={540}
+              className="rounded-t-md w-full h-full object-cover"
             />
           </AspectRatio>
         </CardContent>
