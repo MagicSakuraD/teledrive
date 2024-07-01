@@ -16,12 +16,11 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
 
   useEffect(() => {
     const peer = new Peer("cyber-car-peer-id", {
-      key: "cyber", // 使用任意字符串作为 key
-      host: "0.peerjs.com",
-      port: 443,
-      path: "/",
-      secure: true,
-      debug: 2,
+      host: "111.186.56.118",
+      port: 9000,
+      path: "/cyber",
+      secure: false,
+      debug: 3,
       config: {
         iceServers: [
           {

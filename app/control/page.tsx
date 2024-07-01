@@ -13,15 +13,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CircleCheck } from "lucide-react";
 
 import React, { useEffect, useRef, useState } from "react";
 import Peer, { DataConnection } from "peerjs";
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { LoaderCircle } from "lucide-react";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
-  <span className={`text-sm ${connected ? "text-green-600" : "text-red-500"}`}>
-    {connected ? "已连接" : "连接中..."}
+  <span
+    className={`text-sm ${connected ? "text-green-600" : "text-violet-500"}`}
+  >
+    {connected ? (
+      <div className="flex flex-row gap-1 justify-center items-center">
+        <CircleCheck className="w-4 h-4" />
+        已连接
+      </div>
+    ) : (
+      <div className="flex flex-row gap-1 justify-center items-center">
+        <LoaderCircle className=" animate-spin w-4 h-4" />
+        连接中...
+      </div>
+    )}
   </span>
 ));
 
@@ -35,12 +49,11 @@ const Control = () => {
 
   useEffect(() => {
     const peer = new Peer("cyber-control-peer-id", {
-      key: "cyber",
-      host: "0.peerjs.com",
-      port: 443,
-      path: "/",
-      secure: true,
-      debug: 2,
+      host: "111.186.56.118",
+      port: 9000,
+      path: "/cyber",
+      secure: false,
+      debug: 3,
       config: {
         iceServers: [
           {
