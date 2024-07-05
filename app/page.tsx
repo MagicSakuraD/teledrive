@@ -22,7 +22,7 @@ export default function Dashboard() {
       >
         <div className="min-w-96">
           <RadioGroupItem value="paypal" id="paypal" className="peer sr-only" />
-          <Link href="/control">
+          <Link href="/control-end">
             <Label
               htmlFor="paypal"
               className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
@@ -34,7 +34,7 @@ export default function Dashboard() {
         </div>
         <div className="min-w-96">
           <RadioGroupItem value="apple" id="apple" className="peer sr-only" />
-          <Link href="/car">
+          <Link href="/car-end">
             <Label
               htmlFor="apple"
               className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"

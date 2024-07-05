@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Video, Triangle, MonitorPlay } from "lucide-react";
+import { Video, Triangle, CarFront } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -29,7 +29,7 @@ const AsideBar = () => {
                 className="rounded-lg"
                 aria-label="Playground"
               >
-                <MonitorPlay className="size-5" />
+                <CarFront className="size-5" />
               </Button>
             </Link>
           </TooltipTrigger>
@@ -37,6 +37,7 @@ const AsideBar = () => {
             远程驾驶
           </TooltipContent>
         </Tooltip>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Link href="/peer">
