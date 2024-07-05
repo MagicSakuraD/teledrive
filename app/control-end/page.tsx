@@ -168,7 +168,7 @@ const ControlEnd = () => {
               alt={`Received image from ${topic}`}
               width={960}
               height={540}
-              className="w-full h-full object-cover rounded-lg"
+              className="w-full h-full object-cover rounded-md"
             />
           </div>
         ))}
