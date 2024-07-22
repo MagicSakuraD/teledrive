@@ -17,6 +17,8 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
     null,
   ]);
 
+  const feedbackListenerRef = useRef<ROSLIB.Topic | null>(null); // 新增的反馈监听器
+
   const cameraTopics = [
     "/miivii_gmsl_ros/camera1/compressed",
     "/miivii_gmsl_ros_front_camera/front_camera/compressed",
@@ -126,12 +128,53 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
       imageListenerRefs.current[index] = imageListener;
     });
 
+    // 订阅 "/diankong/full_vehicle_feedback" 话题
+    if (feedbackListenerRef.current) {
+      feedbackListenerRef.current.unsubscribe();
+    }
+
+    if (rosRef.current) {
+      const feedbackListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/diankong/full_vehicle_feedback",
+        messageType: "diankong/VehicleFeedback", // 确认具体的消息类型
+      });
+
+      console.log("尝试订阅 /diankong/full_vehicle_feedback");
+
+      feedbackListener.subscribe((message) => {
+        console.log("this is no okay");
+        console.log("Received vehicle feedback:", message);
+        // 处理收到的反馈信息，查看是否包含速度信息
+        // if (message && message.speed) {
+        //   console.log("Vehicle speed:", message.speed);
+        // }
+      });
+
+      // 订阅失败的处理事件
+      feedbackListener.on("error", (error) => {
+        console.error(
+          "Failed to subscribe to /diankong/full_vehicle_feedback:",
+          error
+        );
+        // 可以在这里添加其他的错误处理逻辑，例如：
+        // - 显示错误信息给用户
+        // - 尝试重新连接
+        // - 使用默认值
+      });
+
+      feedbackListenerRef.current = feedbackListener;
+    }
+
     return () => {
       imageListenerRefs.current.forEach((listener) => {
         if (listener) {
           listener.unsubscribe();
         }
       });
+      if (feedbackListenerRef.current) {
+        feedbackListenerRef.current.unsubscribe();
+      }
     };
   }, [connected]);
 
