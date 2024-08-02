@@ -38,7 +38,7 @@ const AsideBar = () => {
           </TooltipContent>
         </Tooltip>
 
-        <Tooltip>
+        {/* <Tooltip>
           <TooltipTrigger asChild>
             <Link href="/peer">
               <Button
@@ -54,7 +54,7 @@ const AsideBar = () => {
           <TooltipContent side="right" sideOffset={5}>
             video chat
           </TooltipContent>
-        </Tooltip>
+        </Tooltip> */}
       </nav>
       {/* <nav className="mt-auto grid gap-1 p-2">
         <Tooltip>

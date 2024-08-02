@@ -4,6 +4,8 @@ import { CircleCheck, LoaderCircle } from "lucide-react";
 
 import React, { useEffect, useRef, useState } from "react";
 import Peer, { DataConnection } from "peerjs";
+import Gamepad from "./GamePad";
+import VehicleControl from "./Pedal";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -25,7 +27,7 @@ const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
 
 const ControlEnd = () => {
   const [myPeerId, setMyPeerId] = useState("");
-  const [remotePeerId, setRemotePeerId] = useState("cyber-car-peer-id");
+  const [remotePeerId, setRemotePeerId] = useState("car-id");
   const imgRefs = useRef<(HTMLImageElement | null)[]>([
     null,
     null,
@@ -36,6 +38,16 @@ const ControlEnd = () => {
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const [connected, setConnected] = useState(false);
+  const [axes, setAxes] = useState<{
+    rotation: number;
+    brake: number;
+    throttle: number;
+  }>({
+    rotation: 0,
+    brake: 0,
+    throttle: 0,
+  });
+  const [currentGear, setCurrentGear] = useState<string>("N");
 
   const cameraTopics = [
     "/miivii_gmsl_ros/camera1/compressed",
@@ -46,7 +58,7 @@ const ControlEnd = () => {
   ];
 
   useEffect(() => {
-    const peer = new Peer("cyber-control-peer-id", {
+    const peer = new Peer("control-id", {
       host: "111.186.56.118",
       port: 9000,
       path: "/cyber",
@@ -120,6 +132,29 @@ const ControlEnd = () => {
   }, []);
 
   useEffect(() => {
+    let animationFrameId: number;
+
+    const sendControlData = () => {
+      if (connRef.current && connRef.current.open) {
+        const controlData = {
+          axes,
+          currentGear,
+        };
+
+        connRef.current.send(controlData);
+      }
+
+      // 递归调用 requestAnimationFrame 以实现循环发送
+      animationFrameId = requestAnimationFrame(sendControlData);
+    };
+
+    // 启动循环发送
+    animationFrameId = requestAnimationFrame(sendControlData);
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [axes, currentGear]);
+
+  useEffect(() => {
     if (!connected) {
       if (peerRef.current && remotePeerId) {
         const conn = peerRef.current.connect(remotePeerId, {
@@ -173,7 +208,7 @@ const ControlEnd = () => {
           </div>
         ))}
       </div>
-      <div className="h-24">
+      <div className="mb-3">
         <CardFooter className="flex flex-row justify-between py-2 px-0 w-full">
           <div className="flex gap-6 items-center mt-1">
             <p>
@@ -186,6 +221,12 @@ const ControlEnd = () => {
           <ConnectionStatus connected={connected} />
         </CardFooter>
       </div>
+      <Gamepad
+        axes={axes}
+        setAxes={setAxes}
+        currentGear={currentGear}
+        setCurrentGear={setCurrentGear}
+      />
     </div>
   );
 };

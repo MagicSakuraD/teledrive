@@ -32,11 +32,11 @@ export default function RootLayout({
               <AsideBar />
               <div className="flex flex-col">
                 <header className="sticky top-0 z-10 flex h-[57px] items-center justify-between border-b bg-background px-4">
-                  <h1 className="text-xl font-semibold">WebRTC</h1>
+                  <h1 className="text-xl font-semibold">远程驾驶</h1>
 
                   <ModeToggle />
                 </header>
-                <main className="flex overflow-auto p-4 justify-center w-full mx-auto my-auto ">
+                <main className="flex p-4 justify-center w-full mx-auto my-auto ">
                   {children}
                 </main>
               </div>

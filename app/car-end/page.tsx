@@ -4,7 +4,7 @@ import { Peer, DataConnection } from "peerjs";
 import ROSLIB from "roslib";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
+const Car = ({ remotePeerId = "control-id" }) => {
   const [peerId, setPeerId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const connRef = useRef<DataConnection | null>(null);
@@ -18,6 +18,13 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
   ]);
 
   const feedbackListenerRef = useRef<ROSLIB.Topic | null>(null); // 新增的反馈监听器
+  // 使用 useState 存储接收到的控制数据
+  const [controlData, setControlData] = useState({
+    rotation: 0,
+    brake: 0,
+    throttle: 0,
+    gear: "N", // 假设初始挡位为 N
+  });
 
   const cameraTopics = [
     "/miivii_gmsl_ros/camera1/compressed",
@@ -28,7 +35,7 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
   ];
 
   useEffect(() => {
-    const peer = new Peer("cyber-car-peer-id", {
+    const peer = new Peer("car-id", {
       host: "111.186.56.118",
       port: 9000,
       path: "/cyber",
@@ -61,9 +68,43 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
         setConnected(true);
       });
       conn.on("data", (data) => {
-        console.log(`接收到指令: ${data}`);
-        // Handle the received command to control the car
+        try {
+          // Extract data with updated structure
+          const { axes, currentGear } = data as {
+            axes?: {
+              rotation: number;
+              brake: number;
+              throttle: number;
+            };
+            currentGear?: string;
+          };
+
+          // Verify and destructure nested `axes` object
+          if (
+            axes &&
+            typeof axes.rotation === "number" &&
+            typeof axes.brake === "number" &&
+            typeof axes.throttle === "number" &&
+            typeof currentGear === "string"
+          ) {
+            // Update controlData state
+            setControlData({
+              rotation: axes.rotation,
+              brake: axes.brake,
+              throttle: axes.throttle,
+              gear: currentGear,
+            });
+          } else {
+            console.error("接收到的数据格式错误: 数据结构不符", {
+              axes,
+              currentGear,
+            });
+          }
+        } catch (error) {
+          console.error("解析接收到的数据时出错:", error);
+        }
       });
+
       conn.on("error", (error) => {
         console.error("无法连接到控制端:", error);
       });
@@ -129,9 +170,6 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
     });
 
     // 订阅 "/diankong/full_vehicle_feedback" 话题
-    if (feedbackListenerRef.current) {
-      feedbackListenerRef.current.unsubscribe();
-    }
 
     if (rosRef.current) {
       const feedbackListener = new ROSLIB.Topic({
@@ -165,6 +203,34 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
 
       feedbackListenerRef.current = feedbackListener;
     }
+    // 发送控制数据到 ROS 话题
+    // if (rosRef.current && connected) {
+    //   const controlTopic = new ROSLIB.Topic({
+    //     ros: rosRef.current,
+    //     name: "/diankong/control_data",
+    //     messageType: "diankong/ControlData",
+    //   });
+
+    //   const controlDataMessage = new ROSLIB.Message({
+    //     rotation: controlData.rotation,
+    //     brake: controlData.brake,
+    //     throttle: controlData.throttle,
+    //     gear: controlData.gear,
+    //   });
+
+    //   // 设置发送频率
+    //   const sendControlData = () => {
+    //     controlTopic.publish(controlDataMessage);
+    //   };
+
+    //   // 使用 setInterval 定时发送控制数据
+    //   const sendControlDataInterval = setInterval(sendControlData, 100); // 设置发送频率为每100毫秒发送一次
+
+    //   // 清除定时器
+    //   return () => {
+    //     clearInterval(sendControlDataInterval);
+    //   };
+    // }
 
     return () => {
       imageListenerRefs.current.forEach((listener) => {
@@ -186,6 +252,10 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
       <CardContent>
         <p>Peer ID: {peerId}</p>
         <p>Status: {connected ? "已连接" : "未连接"}</p>
+        <p>转向: {Math.floor(controlData.rotation)}°</p>
+        <p>刹车: {Math.floor(controlData.brake * 100)}%</p>
+        <p>油门: {Math.floor(controlData.throttle * 100)}%</p>
+        <p>挡位: {controlData.gear}</p>
       </CardContent>
     </Card>
   );
