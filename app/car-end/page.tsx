@@ -16,7 +16,7 @@ const Car = ({ remotePeerId = "control-id" }) => {
     null,
     null,
   ]);
-
+  const [feedback_sp, setSpeed] = useState<number | null>(0);
   const feedbackListenerRef = useRef<ROSLIB.Topic | null>(null); // 新增的反馈监听器
   // 使用 useState 存储接收到的控制数据
   const [controlData, setControlData] = useState({
@@ -174,21 +174,24 @@ const Car = ({ remotePeerId = "control-id" }) => {
     if (rosRef.current) {
       const feedbackListener = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: "/diankong/full_vehicle_feedback",
-        messageType: "diankong/VehicleFeedback", // 确认具体的消息类型
+        name: "/chassis/raw_vehicle_feedback",
+        messageType: "chassis/VehicleFeedback", // 确认具体的消息类型
       });
 
-      console.log("尝试订阅 /diankong/full_vehicle_feedback");
+      console.log("尝试订阅 /chassis/raw_vehicle_feedback");
 
-      feedbackListener.subscribe((message) => {
-        console.log("this is no okay");
+      feedbackListener.subscribe((message: any) => {
         console.log("Received vehicle feedback:", message);
         // 处理收到的反馈信息，查看是否包含速度信息
-        // if (message && message.speed) {
-        //   console.log("Vehicle speed:", message.speed);
-        // }
+        if (message && message.speed) {
+          setSpeed(message.speed);
+          // 发送 feedback_sp 数据
+          if (connRef.current && connRef.current.open) {
+            const feedbackData = { topic: "feedback_sp", data: message.speed };
+            connRef.current.send(message.speed);
+          }
+        }
       });
-
       // 订阅失败的处理事件
       feedbackListener.on("error", (error) => {
         console.error(
@@ -204,33 +207,36 @@ const Car = ({ remotePeerId = "control-id" }) => {
       feedbackListenerRef.current = feedbackListener;
     }
     // 发送控制数据到 ROS 话题
-    // if (rosRef.current && connected) {
-    //   const controlTopic = new ROSLIB.Topic({
-    //     ros: rosRef.current,
-    //     name: "/diankong/control_data",
-    //     messageType: "diankong/ControlData",
-    //   });
+    if (rosRef.current && connected) {
+      const controlTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/chassis/vehicle_control",
+        messageType: "chassis/VehicleCtrlNew",
+      });
 
-    //   const controlDataMessage = new ROSLIB.Message({
-    //     rotation: controlData.rotation,
-    //     brake: controlData.brake,
-    //     throttle: controlData.throttle,
-    //     gear: controlData.gear,
-    //   });
+      const controlDataMessage = new ROSLIB.Message({
+        vin: "3",
+        speed:
+          feedback_sp! +
+          (controlData.throttle * 2.0 * 50) / 1000 -
+          (controlData.brake * 2.0 * 50) / 1000,
+        steer: controlData.rotation,
+        gear: 0,
+      });
 
-    //   // 设置发送频率
-    //   const sendControlData = () => {
-    //     controlTopic.publish(controlDataMessage);
-    //   };
+      // 设置发送频率
+      const sendControlData = () => {
+        controlTopic.publish(controlDataMessage);
+      };
 
-    //   // 使用 setInterval 定时发送控制数据
-    //   const sendControlDataInterval = setInterval(sendControlData, 100); // 设置发送频率为每100毫秒发送一次
+      // 使用 setInterval 定时发送控制数据
+      const sendControlDataInterval = setInterval(sendControlData, 50); // 设置发送频率为每50毫秒发送一次
 
-    //   // 清除定时器
-    //   return () => {
-    //     clearInterval(sendControlDataInterval);
-    //   };
-    // }
+      // 清除定时器
+      return () => {
+        clearInterval(sendControlDataInterval);
+      };
+    }
 
     return () => {
       imageListenerRefs.current.forEach((listener) => {

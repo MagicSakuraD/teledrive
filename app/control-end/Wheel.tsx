@@ -45,7 +45,7 @@ export default function Wheel({ rotation }: { rotation: number }) {
   const chartData = [
     {
       angle: mapRotation(rotation),
-      fill: "var(--color-angle)",
+      fill: "hsl(var(--chart-2))",
     },
   ];
 
@@ -55,27 +55,26 @@ export default function Wheel({ rotation }: { rotation: number }) {
   return (
     <Card>
       <CardHeader className="items-center pb-0">
-        <CardTitle>方向盘</CardTitle>
-        {/* <CardDescription>{Math.round(endAngle)}</CardDescription> */}
+        <CardTitle className="text-xl">方向盘</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 pb-0">
+      <CardContent className="flex-1 p-0">
         <ChartContainer
           config={chartConfig}
-          className="flex justify-center items-center w-96 h-96"
+          className="flex justify-center items-center w-48 h-48"
         >
           <RadialBarChart
             data={chartData}
             startAngle={startAngle}
             endAngle={endAngle}
-            innerRadius={80}
-            outerRadius={110}
+            innerRadius={70}
+            outerRadius={100}
           >
             <PolarGrid
               gridType="circle"
               radialLines={false}
               stroke="none"
               className="first:fill-muted last:fill-background"
-              polarRadius={[86, 74]}
+              polarRadius={[76, 64]}
             />
             <RadialBar dataKey="angle" background cornerRadius={10} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
@@ -92,7 +91,7 @@ export default function Wheel({ rotation }: { rotation: number }) {
                         <tspan
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-foreground text-4xl font-bold"
+                          className="fill-foreground text-xl font-bold"
                         >
                           {rotation}°
                         </tspan>

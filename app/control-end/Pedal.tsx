@@ -17,9 +17,9 @@ const Pedal = ({ brake, throttle }: { brake: number; throttle: number }) => {
   return (
     <Card>
       <CardHeader className="items-center pb-0">
-        <CardTitle>踏板</CardTitle>
+        <CardTitle className="text-xl">踏板</CardTitle>
       </CardHeader>
-      <CardContent className="flex justify-center items-center h-full">
+      <CardContent className="mt-3">
         <ChartContainer
           config={{
             move: {
@@ -45,13 +45,13 @@ const Pedal = ({ brake, throttle }: { brake: number; throttle: number }) => {
                 activity: "制动",
                 value: brake,
                 label: brakePercentage,
-                fill: "var(--color-stand)",
+                fill: "hsl(var(--chart-1))",
               },
               {
                 activity: "油门",
                 value: throttle,
                 label: throttlePercentage,
-                fill: "var(--color-exercise)",
+                fill: "hsl(var(--chart-3))",
               },
             ]}
             layout="vertical"

@@ -119,7 +119,7 @@ const Gamepad: React.FC<GamepadProps> = ({
           <div>
             {gamepad ? (
               <div>
-                <div className="h-96 w-[80rem] flex flex-row justify-between gap-2">
+                <div className="h-58 w-[80rem] flex flex-row justify-between gap-2">
                   <Wheel rotation={axes.rotation} />
                   <Pedal brake={axes.brake} throttle={axes.throttle} />
                   <GearShift gear={currentGear} />

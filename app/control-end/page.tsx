@@ -48,6 +48,8 @@ const ControlEnd = () => {
     throttle: 0,
   });
   const [currentGear, setCurrentGear] = useState<string>("N");
+  // 用于保存反馈速度的 state
+  const [feedbackSpeed, setFeedbackSpeed] = useState<number | null>(0);
 
   const cameraTopics = [
     "/miivii_gmsl_ros/camera1/compressed",
@@ -93,7 +95,7 @@ const ControlEnd = () => {
         ) {
           const { topic, data: imageData } = data as {
             topic: string;
-            data: Uint8Array;
+            data: any;
           };
           const blob = new Blob([imageData], { type: "image/jpeg" });
           const url = URL.createObjectURL(blob);

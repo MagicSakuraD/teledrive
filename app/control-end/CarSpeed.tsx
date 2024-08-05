@@ -7,20 +7,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Gauge from "./Gauge";
 
 const CarSpeed = () => {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>速度</CardTitle>
-        <CardDescription>Card Description</CardDescription>
+      <CardHeader className="items-center pb-0">
+        <CardTitle className="text-xl">速度</CardTitle>
       </CardHeader>
-      <CardContent>
-        <p>Card Content</p>
+      <CardContent className="mt-3">
+        <Gauge value={60} min={0} max={100} label="Speed" units="m/s" />
       </CardContent>
-      <CardFooter>
-        <p>Card Footer</p>
-      </CardFooter>
     </Card>
   );
 };
