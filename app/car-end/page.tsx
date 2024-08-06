@@ -210,18 +210,14 @@ const Car = ({ remotePeerId = "control-id" }) => {
     if (rosRef.current && connected) {
       const controlTopic = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: "/chassis/vehicle_control",
-        messageType: "chassis/VehicleCtrlNew",
+        name: "/rock_can/steer_command",
+        messageType: "cyber_msgs/steer_cmd",
       });
 
       const controlDataMessage = new ROSLIB.Message({
-        vin: "3",
-        speed:
-          feedback_sp! +
-          (controlData.throttle * 2.0 * 50) / 1000 -
-          (controlData.brake * 2.0 * 50) / 1000,
-        steer: controlData.rotation,
-        gear: 0,
+        is_updated: true,
+        enable_auto_steer: true,
+        steer_cmd: controlData.rotation,
       });
 
       // 设置发送频率

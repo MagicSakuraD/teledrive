@@ -77,7 +77,7 @@ const Gauge: React.FC<GaugeProps> = ({ value, min, max, label, units }) => {
         </defs>
         <path d={backgroundArc} fill="#dbdbe7" />
         <path d={filledArc} fill="url(#Gauge__gradient)" />
-        <line y1="-1" y2="-0.65" stroke="white" strokeWidth="0.027" />
+        {/* <line y1="-1" y2="-0.65" stroke="white" strokeWidth="0.027" /> */}
         <circle
           cx={markerLocation[0]}
           cy={markerLocation[1]}
@@ -98,7 +98,7 @@ const Gauge: React.FC<GaugeProps> = ({ value, min, max, label, units }) => {
       <div
         style={{
           marginTop: "0.4em",
-          fontSize: "2em",
+          fontSize: "1.8em",
           lineHeight: "1em",
           fontWeight: "900",
           fontFeatureSettings: "'zero', 'tnum' 1",

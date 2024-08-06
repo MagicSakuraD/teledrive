@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Peer, { DataConnection } from "peerjs";
 import Gamepad from "./GamePad";
 import VehicleControl from "./Pedal";
+import TestWheel from "./test-wheel";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -220,9 +221,11 @@ const ControlEnd = () => {
               </code>
             </p>
           </div>
+
           <ConnectionStatus connected={connected} />
         </CardFooter>
       </div>
+      <TestWheel setAxes={setAxes} />
       <Gamepad
         axes={axes}
         setAxes={setAxes}
