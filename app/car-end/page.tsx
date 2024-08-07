@@ -17,6 +17,7 @@ const Car = ({ remotePeerId = "control-id" }) => {
     null,
   ]);
   const [feedback_sp, setSpeed] = useState<number | null>(0);
+
   const feedbackListenerRef = useRef<ROSLIB.Topic | null>(null); // 新增的反馈监听器
   // 使用 useState 存储接收到的控制数据
   const [controlData, setControlData] = useState({
@@ -174,14 +175,14 @@ const Car = ({ remotePeerId = "control-id" }) => {
     if (rosRef.current) {
       const feedbackListener = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: "/chassis/raw_vehicle_feedback",
-        messageType: "chassis/VehicleFeedback", // 确认具体的消息类型
+        name: "/rock_can/speed_feedback",
+        messageType: "cyber_msgs/SpeedFeedback", // 确认具体的消息类型
       });
 
-      console.log("尝试订阅 /chassis/raw_vehicle_feedback");
+      console.log("尝试订阅 SpeedFeedback");
 
       feedbackListener.subscribe((message: any) => {
-        console.log("Received vehicle feedback:", message);
+        // console.log("Received vehicle feedback:", message);
         // 处理收到的反馈信息，查看是否包含速度信息
         if (message && message.speed) {
           setSpeed(message.speed);
@@ -206,33 +207,6 @@ const Car = ({ remotePeerId = "control-id" }) => {
 
       feedbackListenerRef.current = feedbackListener;
     }
-    // 发送控制数据到 ROS 话题
-    if (rosRef.current && connected) {
-      const controlTopic = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/rock_can/steer_command",
-        messageType: "cyber_msgs/steer_cmd",
-      });
-
-      const controlDataMessage = new ROSLIB.Message({
-        is_updated: true,
-        enable_auto_steer: true,
-        steer_cmd: controlData.rotation,
-      });
-
-      // 设置发送频率
-      const sendControlData = () => {
-        controlTopic.publish(controlDataMessage);
-      };
-
-      // 使用 setInterval 定时发送控制数据
-      const sendControlDataInterval = setInterval(sendControlData, 50); // 设置发送频率为每50毫秒发送一次
-
-      // 清除定时器
-      return () => {
-        clearInterval(sendControlDataInterval);
-      };
-    }
 
     return () => {
       imageListenerRefs.current.forEach((listener) => {
@@ -245,6 +219,37 @@ const Car = ({ remotePeerId = "control-id" }) => {
       }
     };
   }, [connected]);
+
+  useEffect(() => {
+    // 发送控制数据到 ROS 话题
+    let animationFrameId: number;
+
+    const sendControlData = () => {
+      if (rosRef.current && connected) {
+        const controlTopic = new ROSLIB.Topic({
+          ros: rosRef.current,
+          name: "/rock_can/steer_command",
+          messageType: "cyber_msgs/steer_cmd",
+        });
+        const controlDataMessage = new ROSLIB.Message({
+          is_updated: true,
+          enable_auto_steer: true,
+          steer_cmd: controlData.rotation,
+        });
+
+        controlTopic.publish(controlDataMessage);
+        console.log("发送控制数据:", controlDataMessage);
+      }
+
+      animationFrameId = requestAnimationFrame(sendControlData);
+    };
+
+    sendControlData();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [controlData]);
 
   return (
     <Card className="min-w-[600px]">
