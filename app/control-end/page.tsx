@@ -189,8 +189,8 @@ const ControlEnd = () => {
   }, [remotePeerId, connected]);
 
   return (
-    <div className="container">
-      <div className="grid grid-cols-4 gap-x-4 gap-y-2">
+    <div className="w-full min-[2400px]:w-9/12">
+      <div className="grid grid-cols-4 gap-x-4 gap-y-2 relative">
         {cameraTopics.map((topic, index) => (
           <div
             key={topic}
@@ -210,6 +210,14 @@ const ControlEnd = () => {
             />
           </div>
         ))}
+        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-white bg-opacity-30 backdrop-filter backdrop-blur-lg text-center w-1/3 z-10 h-20 rounded-md">
+          <Gamepad
+            axes={axes}
+            setAxes={setAxes}
+            currentGear={currentGear}
+            setCurrentGear={setCurrentGear}
+          />
+        </div>
       </div>
       <div className="mb-3">
         <CardFooter className="flex flex-row justify-between py-2 px-0 w-full">
@@ -225,13 +233,7 @@ const ControlEnd = () => {
           <ConnectionStatus connected={connected} />
         </CardFooter>
       </div>
-      <TestWheel setAxes={setAxes} />
-      <Gamepad
-        axes={axes}
-        setAxes={setAxes}
-        currentGear={currentGear}
-        setCurrentGear={setCurrentGear}
-      />
+      {/* <TestWheel setAxes={setAxes} /> */}
     </div>
   );
 };

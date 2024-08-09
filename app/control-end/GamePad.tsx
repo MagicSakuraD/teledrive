@@ -113,34 +113,27 @@ const Gamepad: React.FC<GamepadProps> = ({
   }, [gamepad]);
 
   return (
-    <main>
-      <div className="flex flex-row items-center justify-between bg-transparent">
-        {isGamepadSupported ? (
-          <div>
-            {gamepad ? (
-              <div>
-                <div className="h-58 w-[80rem] flex flex-row justify-between gap-2">
-                  <Wheel rotation={axes.rotation} />
-                  <Pedal brake={axes.brake} throttle={axes.throttle} />
-                  <GearShift gear={currentGear} />
-                  <CarSpeed />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  已连接的游戏手柄: {gamepad.id}
-                </p>
-              </div>
-            ) : (
-              <p className="text-muted-foreground flex flex-row gap-1 items-center">
-                <CircleAlert color="#ea580c" className="w-5 h-5" />
-                未连接游戏手柄
-              </p>
-            )}
-          </div>
-        ) : (
-          <CardHeader className="text-xl">此浏览器不支持游戏手柄API</CardHeader>
-        )}
-      </div>
-    </main>
+    <div className="flex flex-row items-center justify-between bg-transparent w-full h-full">
+      {isGamepadSupported ? (
+        <>
+          {gamepad ? (
+            <div className="flex flex-row justify-around gap-2 w-full">
+              {/* <Wheel rotation={axes.rotation} />
+                  <Pedal brake={axes.brake} throttle={axes.throttle} /> */}
+              <GearShift gear={currentGear} />
+              <CarSpeed />
+            </div>
+          ) : (
+            <div className="text-muted-foreground flex flex-row gap-1 items-center justify-center w-full h-20">
+              <CircleAlert color="#ea580c" className="w-5 h-5" />
+              未连接游戏手柄
+            </div>
+          )}
+        </>
+      ) : (
+        <CardHeader className="text-xl">此浏览器不支持游戏手柄API</CardHeader>
+      )}
+    </div>
   );
 };
 

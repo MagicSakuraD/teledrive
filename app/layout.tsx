@@ -36,7 +36,7 @@ export default function RootLayout({
 
                   <ModeToggle />
                 </header>
-                <main className="flex p-4 justify-center w-full mx-auto my-auto ">
+                <main className="flex p-4 justify-center w-full my-auto">
                   {children}
                 </main>
               </div>

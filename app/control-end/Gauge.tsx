@@ -41,7 +41,7 @@ const Gauge: React.FC<GaugeProps> = ({ value, min, max, label, units }) => {
 
   const colorScale = scaleLinear<string>()
     .domain([0, 1])
-    .range(["#86efac", "#14532d"]);
+    .range(["#22c55e", "#9333ea"]);
 
   const gradientSteps = colorScale.ticks(10).map((value) => colorScale(value));
 
@@ -55,7 +55,7 @@ const Gauge: React.FC<GaugeProps> = ({ value, min, max, label, units }) => {
     >
       <svg
         style={{ overflow: "visible" }}
-        width="9em"
+        width="5em"
         viewBox={[-1, -1, 2, 1].join(" ")}
       >
         <defs>
@@ -94,30 +94,11 @@ const Gauge: React.FC<GaugeProps> = ({ value, min, max, label, units }) => {
           fill="#6a6a85"
         />
       </svg>
+      <div className="flex flex-row gap-1 justify-center items-center leading-loose">
+        <div className="sm">{format(",")(value)}</div>
 
-      <div
-        style={{
-          marginTop: "0.4em",
-          fontSize: "1.8em",
-          lineHeight: "1em",
-          fontWeight: "900",
-          fontFeatureSettings: "'zero', 'tnum' 1",
-        }}
-      >
-        {format(",")(value)}
+        {!!units && <div className="text-xs">{units}</div>}
       </div>
-
-      {!!units && (
-        <div
-          style={{
-            color: "#8b8ba7",
-            lineHeight: "1.3em",
-            fontWeight: "300",
-          }}
-        >
-          {units}
-        </div>
-      )}
     </div>
   );
 };

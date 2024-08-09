@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Peer, DataConnection } from "peerjs";
 import ROSLIB from "roslib";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,8 @@ const Car = ({ remotePeerId = "control-id" }) => {
     throttle: 0,
     gear: "N", // 假设初始挡位为 N
   });
+  const controlDataRef = useRef(controlData);
+  const controlTopicRef = useRef<ROSLIB.Topic | null>(null); // 新增的发布话题引用
 
   const cameraTopics = [
     "/miivii_gmsl_ros/camera1/compressed",
@@ -182,7 +184,6 @@ const Car = ({ remotePeerId = "control-id" }) => {
       console.log("尝试订阅 SpeedFeedback");
 
       feedbackListener.subscribe((message: any) => {
-        // console.log("Received vehicle feedback:", message);
         // 处理收到的反馈信息，查看是否包含速度信息
         if (message && message.speed) {
           setSpeed(message.speed);
@@ -195,10 +196,7 @@ const Car = ({ remotePeerId = "control-id" }) => {
       });
       // 订阅失败的处理事件
       feedbackListener.on("error", (error) => {
-        console.error(
-          "Failed to subscribe to /diankong/full_vehicle_feedback:",
-          error
-        );
+        console.error("Failed to subscribe to vehicle_feedback:", error);
         // 可以在这里添加其他的错误处理逻辑，例如：
         // - 显示错误信息给用户
         // - 尝试重新连接
@@ -221,23 +219,32 @@ const Car = ({ remotePeerId = "control-id" }) => {
   }, [connected]);
 
   useEffect(() => {
-    // 发送控制数据到 ROS 话题
-    let animationFrameId: number;
+    controlDataRef.current = controlData;
+  }, [controlData]);
 
-    const sendControlData = () => {
-      if (rosRef.current && connected) {
-        const controlTopic = new ROSLIB.Topic({
+  useEffect(() => {
+    if (rosRef.current) {
+      // 初始化或获取控制 topic
+      if (!controlTopicRef.current) {
+        controlTopicRef.current = new ROSLIB.Topic({
           ros: rosRef.current,
           name: "/rock_can/steer_command",
           messageType: "cyber_msgs/steer_cmd",
         });
+      }
+    }
+
+    let animationFrameId: number;
+
+    const sendControlData = () => {
+      if (rosRef.current && connected && controlTopicRef.current) {
         const controlDataMessage = new ROSLIB.Message({
           is_updated: true,
           enable_auto_steer: true,
-          steer_cmd: controlData.rotation,
+          steer_cmd: controlDataRef.current.rotation,
         });
 
-        controlTopic.publish(controlDataMessage);
+        controlTopicRef.current.publish(controlDataMessage);
         console.log("发送控制数据:", controlDataMessage);
       }
 
@@ -248,8 +255,11 @@ const Car = ({ remotePeerId = "control-id" }) => {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      if (controlTopicRef.current) {
+        controlTopicRef.current.unsubscribe(); // 销毁操作
+      }
     };
-  }, [controlData]);
+  }, [rosRef, connected]);
 
   return (
     <Card className="min-w-[600px]">

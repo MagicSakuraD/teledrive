@@ -15,7 +15,7 @@ import Link from "next/link";
 
 export default function Dashboard() {
   return (
-    <div className="container max-w-[56rem]">
+    <div className="container max-w-[60rem]">
       <RadioGroup
         defaultValue="card"
         className="flex flex-col gap-4 md:flex-row"
