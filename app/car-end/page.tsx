@@ -39,10 +39,10 @@ const Car = ({ remotePeerId = "control-id" }) => {
 
   useEffect(() => {
     const peer = new Peer("car-id", {
-      host: "111.186.56.118",
+      host: "cyberc3-cloud-server.sjtu.edu.cn",
       port: 9000,
       path: "/cyber",
-      secure: false,
+      secure: true,
       debug: 2,
       config: {
         iceServers: [

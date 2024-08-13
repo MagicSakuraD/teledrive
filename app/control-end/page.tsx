@@ -4,9 +4,9 @@ import { CircleCheck, LoaderCircle } from "lucide-react";
 
 import React, { useEffect, useRef, useState } from "react";
 import Peer, { DataConnection } from "peerjs";
-import Gamepad from "./GamePad";
-import VehicleControl from "./Pedal";
-import TestWheel from "./test-wheel";
+import Gamepad from "./components/GamePad";
+import VehicleControl from "./components/Pedal";
+import TestWheel from "./components/test-wheel";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -62,10 +62,10 @@ const ControlEnd = () => {
 
   useEffect(() => {
     const peer = new Peer("control-id", {
-      host: "111.186.56.118",
+      host: "cyberc3-cloud-server.sjtu.edu.cn",
       port: 9000,
       path: "/cyber",
-      secure: false,
+      secure: true,
       debug: 2,
       config: {
         iceServers: [
