@@ -13,6 +13,7 @@ import Wheel from "./Wheel";
 import Pedal from "./Pedal";
 import GearShift from "./GearShift";
 import CarSpeed from "./CarSpeed";
+import Gauge from "./Gauge";
 
 interface GamepadProps {
   axes: {
@@ -29,6 +30,7 @@ interface GamepadProps {
   >;
   currentGear: string;
   setCurrentGear: React.Dispatch<React.SetStateAction<string>>;
+  feedbackSpeed: number;
 }
 
 const Gamepad: React.FC<GamepadProps> = ({
@@ -36,6 +38,7 @@ const Gamepad: React.FC<GamepadProps> = ({
   setAxes,
   currentGear,
   setCurrentGear,
+  feedbackSpeed,
 }) => {
   const [gamepad, setGamepad] = useState<Gamepad | null>(null);
   const [isGamepadSupported, setIsGamepadSupported] = useState<boolean>(true);
@@ -117,14 +120,23 @@ const Gamepad: React.FC<GamepadProps> = ({
       {isGamepadSupported ? (
         <>
           {gamepad ? (
-            <div className="flex flex-row justify-around gap-2 w-full">
+            <div className="flex flex-row justify-around gap-2 w-full items-center">
               {/* <Wheel rotation={axes.rotation} />
                   <Pedal brake={axes.brake} throttle={axes.throttle} /> */}
+              <div className="w-3">{axes.rotation}</div>
+              <div className="w-3">{axes.brake}</div>
+              <div className="w-3">{axes.throttle}</div>
               <GearShift gear={currentGear} />
-              <CarSpeed />
+              <Gauge
+                value={feedbackSpeed}
+                min={0}
+                max={100}
+                label="Speed"
+                units="km/s"
+              />
             </div>
           ) : (
-            <div className="text-muted-foreground flex flex-row gap-1 items-center justify-center w-full h-20">
+            <div className="text-foreground/80 flex flex-row gap-1 items-center justify-center w-full h-20">
               <CircleAlert color="#ea580c" className="w-5 h-5" />
               未连接游戏手柄
             </div>

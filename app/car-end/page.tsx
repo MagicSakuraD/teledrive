@@ -4,50 +4,57 @@ import { Peer, DataConnection } from "peerjs";
 import ROSLIB from "roslib";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const Car = ({ remotePeerId = "control-id" }) => {
+const Car = ({ remotePeerId = "control-001" }) => {
   const [peerId, setPeerId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const connRef = useRef<DataConnection | null>(null);
   const rosRef = useRef<ROSLIB.Ros | null>(null);
-  const imageListenerRefs = useRef<(ROSLIB.Topic | null)[]>([
-    null,
-    null,
-    null,
-    null,
-    null,
-  ]);
+  const imageListenerRefs = useRef<ROSLIB.Topic | null>(null);
+  const secondImageListenerRef = useRef<ROSLIB.Topic | null>(null);
   const [feedback_sp, setSpeed] = useState<number | null>(0);
-
-  const feedbackListenerRef = useRef<ROSLIB.Topic | null>(null); // 新增的反馈监听器
-  // 使用 useState 存储接收到的控制数据
-  const [controlData, setControlData] = useState({
+  // 使用 useRef 存储接收到的控制数据
+  const controlDataRef = useRef({
     rotation: 0,
     brake: 0,
     throttle: 0,
-    gear: "N", // 假设初始挡位为 N
+    gear: "N",
   });
-  const controlDataRef = useRef(controlData);
-  const controlTopicRef = useRef<ROSLIB.Topic | null>(null); // 新增的发布话题引用
 
-  const cameraTopics = [
-    "/miivii_gmsl_ros/camera1/compressed",
-    "/miivii_gmsl_ros_front_camera/front_camera/compressed",
-    "/miivii_gmsl_ros/camera2/compressed",
-    "/miivii_gmsl_ros/camera3/compressed",
-    "/miivii_gmsl_ros/camera4/compressed",
-  ];
+  const [showControl, setShowControl] = useState({
+    rotation: 0,
+    brake: 0,
+    throttle: 0,
+    gear: "N",
+  });
+  const [receivedCamera, setReceivedCamera] = useState<string>(
+    "/driver/fisheye/front/compressed"
+  );
+
+  // const cameraTopics = [
+  //   "/driver/fisheye/avm/compressed",
+  //   // "/driver/fisheye/front/compressed",
+  //   // "/driver/fisheye/left/compressed",
+  //   // "/driver/fisheye/right/compressed",
+  //   // "/driver/fisheye/back/compressed",
+  // ];
+  const avmCameraTopic = "/driver/fisheye/avm/compressed";
 
   useEffect(() => {
-    const peer = new Peer("car-id", {
+    const peer = new Peer("car-001", {
       host: "cyberc3-cloud-server.sjtu.edu.cn",
-      port: 9000,
+      port: 443,
       path: "/cyber",
       secure: true,
       debug: 2,
       config: {
         iceServers: [
           {
-            urls: "turn:111.186.56.118:3478",
+            urls: "turn:asia-east.relay.metered.ca:80",
+            username: "c0f6e9eca6e8a8dd3ee14525",
+            credential: "Yr/JEAAWgXYEg4AW",
+          },
+          {
+            urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
             username: "test",
             credential: "123456",
           },
@@ -70,38 +77,52 @@ const Car = ({ remotePeerId = "control-id" }) => {
         console.log("成功连接到控制端.");
         setConnected(true);
       });
+
       conn.on("data", (data) => {
         try {
-          // Extract data with updated structure
-          const { axes, currentGear } = data as {
-            axes?: {
-              rotation: number;
-              brake: number;
-              throttle: number;
-            };
-            currentGear?: string;
+          const { topic, data: receivedData } = data as {
+            topic: string;
+            data: any;
           };
 
-          // Verify and destructure nested `axes` object
-          if (
-            axes &&
-            typeof axes.rotation === "number" &&
-            typeof axes.brake === "number" &&
-            typeof axes.throttle === "number" &&
-            typeof currentGear === "string"
-          ) {
-            // Update controlData state
-            setControlData({
-              rotation: axes.rotation,
-              brake: axes.brake,
-              throttle: axes.throttle,
-              gear: currentGear,
-            });
-          } else {
-            console.error("接收到的数据格式错误: 数据结构不符", {
-              axes,
-              currentGear,
-            });
+          switch (topic) {
+            case "axes":
+              // Type assertion for the "axes" topic
+              const { axes, currentGear } = receivedData as {
+                axes: {
+                  rotation: number;
+                  brake: number;
+                  throttle: number;
+                };
+                currentGear: string;
+              };
+
+              // Update controlData state directly
+              controlDataRef.current = {
+                rotation: axes.rotation,
+                brake: axes.brake,
+                throttle: axes.throttle,
+                gear: currentGear,
+              };
+
+              setShowControl({
+                rotation: axes.rotation,
+                brake: axes.brake,
+                throttle: axes.throttle,
+                gear: currentGear,
+              });
+              break;
+
+            case "fisheye":
+              console.log("接收到新的摄像头话题:", receivedData);
+              // Type assertion for the "fisheye" topic
+              const fisheyeUrl = receivedData as string;
+              setReceivedCamera(fisheyeUrl);
+              break;
+
+            default:
+              console.error("未知话题:", topic);
+              break;
           }
         } catch (error) {
           console.error("解析接收到的数据时出错:", error);
@@ -125,9 +146,7 @@ const Car = ({ remotePeerId = "control-id" }) => {
 
   useEffect(() => {
     if (!rosRef.current) {
-      const ros = new ROSLIB.Ros({
-        url: "ws://localhost:9090",
-      });
+      const ros = new ROSLIB.Ros({ url: "ws://localhost:9090" });
 
       ros.on("connection", () => {
         console.log("成功连接到ROS.");
@@ -140,22 +159,124 @@ const Car = ({ remotePeerId = "control-id" }) => {
       rosRef.current = ros;
     }
 
-    cameraTopics.forEach((topic, index) => {
-      if (imageListenerRefs.current[index]) {
-        imageListenerRefs.current[index]!.unsubscribe();
-      }
-
-      if (!rosRef.current) {
-        return;
-      }
+    if (connected) {
+      // 订阅合成视角相机话题
+      if (!rosRef.current) return;
 
       const imageListener = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: topic,
+        name: avmCameraTopic,
         messageType: "sensor_msgs/CompressedImage",
       });
 
       imageListener.subscribe((message: any) => {
+        const buffer = Buffer.from(message.data, "base64");
+        const arrayBuffer = buffer.buffer.slice(
+          buffer.byteOffset,
+          buffer.byteOffset + buffer.byteLength
+        );
+
+        if (connRef.current && connRef.current.open) {
+          connRef.current.send({
+            topic: "avm_camera",
+            data: new Uint8Array(arrayBuffer),
+          });
+        }
+      });
+
+      // 订阅速度反馈话题
+      const feedbackListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/speed_feedback",
+        messageType: "cyber_msgs/SpeedFeedback",
+      });
+
+      feedbackListener.subscribe((message: any) => {
+        if (message && message.speed) {
+          setSpeed(message.speed_kmh);
+
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "feedback_sp",
+              data: message.speed_kmh,
+            });
+          }
+        }
+      });
+
+      // 控制话题
+      const controlTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/steer_command",
+        messageType: "cyber_msgs/steer_cmd",
+      });
+
+      const speedTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/speed_command",
+        messageType: "cyber_msgs/speed_cmd",
+      });
+
+      const brakeTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/brake_command",
+        messageType: "cyber_msgs/brake_cmd",
+      });
+
+      const sendControlData = () => {
+        if (rosRef.current && connected) {
+          const controlDataMessage = new ROSLIB.Message({
+            is_updated: true,
+            enable_auto_steer: true,
+            steer_cmd: controlDataRef.current.rotation,
+          });
+
+          controlTopic.publish(controlDataMessage);
+
+          const speedDataMessage = new ROSLIB.Message({
+            is_updated: true,
+            enable_auto_speed: true,
+            speed_cmd: controlDataRef.current.throttle * 1000,
+            acc_cmd: 0,
+            gear: 1,
+          });
+
+          speedTopic.publish(speedDataMessage);
+
+          const brakeDataMessage = new ROSLIB.Message({
+            enable_auto_brake: true,
+            deceleration: controlDataRef.current.brake * -5,
+          });
+
+          brakeTopic.publish(brakeDataMessage);
+        }
+
+        requestAnimationFrame(sendControlData);
+      };
+
+      sendControlData();
+
+      return () => {
+        imageListener.unsubscribe();
+        feedbackListener.unsubscribe();
+        controlTopic.unsubscribe();
+        speedTopic.unsubscribe();
+        brakeTopic.unsubscribe();
+      };
+    }
+  }, [connected]);
+
+  useEffect(() => {
+    if (rosRef.current) {
+      // 初始化或获取控制 topic
+      //切换视角
+      const secondImageListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: receivedCamera,
+        messageType: "sensor_msgs/CompressedImage",
+      });
+
+      secondImageListener.subscribe((message: any) => {
         // 将 Base64 编码的字符串解码为二进制数据
         const buffer = Buffer.from(message.data, "base64");
         // 从 Buffer 对象中提取 ArrayBuffer
@@ -163,103 +284,21 @@ const Car = ({ remotePeerId = "control-id" }) => {
           buffer.byteOffset,
           buffer.byteOffset + buffer.byteLength
         );
-        // 检查连接是否打开，然后发送带有 topic 和数据的对象
+        // 检查连接是否打开，然后发送 ArrayBuffer
         if (connRef.current && connRef.current.open) {
-          connRef.current.send({ topic, data: new Uint8Array(arrayBuffer) });
+          connRef.current.send({
+            topic: "second_camera",
+            data: new Uint8Array(arrayBuffer),
+          });
         }
       });
-
-      imageListenerRefs.current[index] = imageListener;
-    });
-
-    // 订阅 "/diankong/full_vehicle_feedback" 话题
-
-    if (rosRef.current) {
-      const feedbackListener = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/rock_can/speed_feedback",
-        messageType: "cyber_msgs/SpeedFeedback", // 确认具体的消息类型
-      });
-
-      console.log("尝试订阅 SpeedFeedback");
-
-      feedbackListener.subscribe((message: any) => {
-        // 处理收到的反馈信息，查看是否包含速度信息
-        if (message && message.speed) {
-          setSpeed(message.speed);
-          // 发送 feedback_sp 数据
-          if (connRef.current && connRef.current.open) {
-            const feedbackData = { topic: "feedback_sp", data: message.speed };
-            connRef.current.send(message.speed);
-          }
+      return () => {
+        if (secondImageListener) {
+          secondImageListener.unsubscribe();
         }
-      });
-      // 订阅失败的处理事件
-      feedbackListener.on("error", (error) => {
-        console.error("Failed to subscribe to vehicle_feedback:", error);
-        // 可以在这里添加其他的错误处理逻辑，例如：
-        // - 显示错误信息给用户
-        // - 尝试重新连接
-        // - 使用默认值
-      });
-
-      feedbackListenerRef.current = feedbackListener;
+      };
     }
-
-    return () => {
-      imageListenerRefs.current.forEach((listener) => {
-        if (listener) {
-          listener.unsubscribe();
-        }
-      });
-      if (feedbackListenerRef.current) {
-        feedbackListenerRef.current.unsubscribe();
-      }
-    };
-  }, [connected]);
-
-  useEffect(() => {
-    controlDataRef.current = controlData;
-  }, [controlData]);
-
-  useEffect(() => {
-    if (rosRef.current) {
-      // 初始化或获取控制 topic
-      if (!controlTopicRef.current) {
-        controlTopicRef.current = new ROSLIB.Topic({
-          ros: rosRef.current,
-          name: "/rock_can/steer_command",
-          messageType: "cyber_msgs/steer_cmd",
-        });
-      }
-    }
-
-    let animationFrameId: number;
-
-    const sendControlData = () => {
-      if (rosRef.current && connected && controlTopicRef.current) {
-        const controlDataMessage = new ROSLIB.Message({
-          is_updated: true,
-          enable_auto_steer: true,
-          steer_cmd: controlDataRef.current.rotation,
-        });
-
-        controlTopicRef.current.publish(controlDataMessage);
-        console.log("发送控制数据:", controlDataMessage);
-      }
-
-      animationFrameId = requestAnimationFrame(sendControlData);
-    };
-
-    sendControlData();
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      if (controlTopicRef.current) {
-        controlTopicRef.current.unsubscribe(); // 销毁操作
-      }
-    };
-  }, [rosRef, connected]);
+  }, [receivedCamera]);
 
   return (
     <Card className="min-w-[600px]">
@@ -269,10 +308,12 @@ const Car = ({ remotePeerId = "control-id" }) => {
       <CardContent>
         <p>Peer ID: {peerId}</p>
         <p>Status: {connected ? "已连接" : "未连接"}</p>
-        <p>转向: {Math.floor(controlData.rotation)}°</p>
-        <p>刹车: {Math.floor(controlData.brake * 100)}%</p>
-        <p>油门: {Math.floor(controlData.throttle * 100)}%</p>
-        <p>挡位: {controlData.gear}</p>
+        <p>转向: {Math.floor(showControl.rotation)}°</p>
+        <p>刹车: {Math.floor(showControl.brake * 100)}%</p>
+        <p>油门: {Math.floor(showControl.throttle * 100)}%</p>
+        <p>挡位: {showControl.gear}</p>
+        <p>速度：{feedback_sp}</p>
+        <p>摄像头： {receivedCamera}</p>
       </CardContent>
     </Card>
   );

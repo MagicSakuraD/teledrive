@@ -7,6 +7,14 @@ import Peer, { DataConnection } from "peerjs";
 import Gamepad from "./components/GamePad";
 import VehicleControl from "./components/Pedal";
 import TestWheel from "./components/test-wheel";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import { SelectTrigger } from "@radix-ui/react-select";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -28,14 +36,9 @@ const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
 
 const ControlEnd = () => {
   const [myPeerId, setMyPeerId] = useState("");
-  const [remotePeerId, setRemotePeerId] = useState("car-id");
-  const imgRefs = useRef<(HTMLImageElement | null)[]>([
-    null,
-    null,
-    null,
-    null,
-    null,
-  ]);
+  const [remotePeerId, setRemotePeerId] = useState("car-001");
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const secondimgRef = useRef<HTMLImageElement>(null);
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const [connected, setConnected] = useState(false);
@@ -50,27 +53,26 @@ const ControlEnd = () => {
   });
   const [currentGear, setCurrentGear] = useState<string>("N");
   // 用于保存反馈速度的 state
-  const [feedbackSpeed, setFeedbackSpeed] = useState<number | null>(0);
+  const [feedbackSpeed, setFeedbackSpeed] = useState<number>(0);
 
-  const cameraTopics = [
-    "/miivii_gmsl_ros/camera1/compressed",
-    "/miivii_gmsl_ros_front_camera/front_camera/compressed",
-    "/miivii_gmsl_ros/camera2/compressed",
-    "/miivii_gmsl_ros/camera3/compressed",
-    "/miivii_gmsl_ros/camera4/compressed",
-  ];
+  const cameraTopic = "/driver/fisheye/avm/compressed";
 
   useEffect(() => {
-    const peer = new Peer("control-id", {
+    const peer = new Peer("control-001", {
       host: "cyberc3-cloud-server.sjtu.edu.cn",
-      port: 9000,
+      port: 443,
       path: "/cyber",
       secure: true,
       debug: 2,
       config: {
         iceServers: [
           {
-            urls: "turn:111.186.56.118:3478",
+            urls: "turn:asia-east.relay.metered.ca:80",
+            username: "c0f6e9eca6e8a8dd3ee14525",
+            credential: "Yr/JEAAWgXYEg4AW",
+          },
+          {
+            urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
             username: "test",
             credential: "123456",
           },
@@ -88,24 +90,46 @@ const ControlEnd = () => {
       connRef.current = conn;
 
       conn.on("data", (data: unknown) => {
-        if (
-          data &&
-          typeof data === "object" &&
-          "topic" in data &&
-          "data" in data
-        ) {
-          const { topic, data: imageData } = data as {
+        if (data) {
+          const { topic, data: receivedData } = data as {
             topic: string;
             data: any;
           };
-          const blob = new Blob([imageData], { type: "image/jpeg" });
-          const url = URL.createObjectURL(blob);
-          const index = cameraTopics.indexOf(topic);
-          if (index !== -1 && imgRefs.current[index]) {
-            if (imgRefs.current[index]!.src) {
-              URL.revokeObjectURL(imgRefs.current[index]!.src);
-            }
-            imgRefs.current[index]!.src = url;
+
+          switch (topic) {
+            case "feedback_sp":
+              // 如果接收到的是速度反馈信息
+              console.log("Received speed feedback:", receivedData);
+              setFeedbackSpeed(receivedData); // 你可以将接收到的速度信息更新到状态中
+              break;
+            case "avm_camera":
+              // 处理图像数据
+              const blob = new Blob([receivedData], { type: "image/jpeg" });
+              const url = URL.createObjectURL(blob);
+              if (imgRef.current) {
+                if (imgRef.current.src) {
+                  URL.revokeObjectURL(imgRef.current.src);
+                }
+                imgRef.current.src = url;
+              }
+              break;
+            case "second_camera":
+              // 处理图像数据
+              const blob_second = new Blob([receivedData], {
+                type: "image/jpeg",
+              });
+              const url_second = URL.createObjectURL(blob_second);
+              if (secondimgRef.current) {
+                if (secondimgRef.current.src) {
+                  URL.revokeObjectURL(secondimgRef.current.src);
+                }
+                secondimgRef.current.src = url_second;
+              }
+              break;
+
+            default:
+              console.warn("收到的不是预期的数据格式");
+              break;
           }
         } else {
           console.warn("收到的不是预期的数据格式");
@@ -144,7 +168,7 @@ const ControlEnd = () => {
           currentGear,
         };
 
-        connRef.current.send(controlData);
+        connRef.current.send({ topic: "axes", data: controlData });
       }
 
       // 递归调用 requestAnimationFrame 以实现循环发送
@@ -188,39 +212,48 @@ const ControlEnd = () => {
     }
   }, [remotePeerId, connected]);
 
+  const switchTopic = (newTopic: string) => {
+    if (connRef.current) {
+      connRef.current.send({ topic: "fisheye", data: newTopic });
+    }
+  };
+
   return (
-    <div className="w-full min-[2400px]:w-9/12">
-      <div className="grid grid-cols-4 gap-x-4 gap-y-2 relative">
-        {cameraTopics.map((topic, index) => (
-          <div
-            key={topic}
-            className={`aspect-video ${
-              index === 1 ? "col-span-2 row-span-2" : ""
-            }`}
-          >
+    <div className="min-[2400px]:w-7/12">
+      <Card className="overflow-hidden">
+        <div className="flex flex-row items-center justify-center ">
+          <div className="relative h-full w-[36%] ">
             <img
               src="/placeholder.svg"
-              ref={(el) => {
-                imgRefs.current[index] = el;
-              }}
-              alt={`Received image from ${topic}`}
-              width={960}
-              height={540}
-              className="w-full h-full object-cover rounded-md"
+              ref={imgRef}
+              alt={`Received image from ${cameraTopic}`}
+              className="w-full h-full object-cover"
+            />
+            <div
+              className="absolute bottom-24 left-1/2 transform -translate-x-1/2 translate-y-3/4
+        backdrop-blur-md bg-white/30 bg-opacity-30 backdrop-filter text-center z-10 w-5/6 h-1/6 md:h-20 rounded-md"
+            >
+              <Gamepad
+                axes={axes}
+                setAxes={setAxes}
+                currentGear={currentGear}
+                setCurrentGear={setCurrentGear}
+                feedbackSpeed={feedbackSpeed}
+              />
+            </div>
+          </div>
+          {/* 鱼眼相机 */}
+          <div className="h-full w-[64%]">
+            <img
+              src="/placeholder.svg"
+              ref={secondimgRef}
+              alt="Received image Frame"
+              className="w-full h-full object-cover"
             />
           </div>
-        ))}
-        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-white bg-opacity-30 backdrop-filter backdrop-blur-lg text-center w-1/3 z-10 h-20 rounded-md">
-          <Gamepad
-            axes={axes}
-            setAxes={setAxes}
-            currentGear={currentGear}
-            setCurrentGear={setCurrentGear}
-          />
         </div>
-      </div>
-      <div className="mb-3">
-        <CardFooter className="flex flex-row justify-between py-2 px-0 w-full">
+
+        <CardFooter className="flex flex-row justify-between py-2 w-full">
           <div className="flex gap-6 items-center mt-1">
             <p>
               控制端ID:
@@ -228,11 +261,31 @@ const ControlEnd = () => {
                 {myPeerId}
               </code>
             </p>
+            <ConnectionStatus connected={connected} />
           </div>
 
-          <ConnectionStatus connected={connected} />
+          <Select onValueChange={switchTopic}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="选择摄像头" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="/driver/fisheye/front/compressed">
+                前置摄像头
+              </SelectItem>
+              <SelectItem value="/driver/fisheye/back/compressed">
+                后置摄像头
+              </SelectItem>
+              <SelectItem value="/driver/fisheye/left/compressed">
+                左侧摄像头
+              </SelectItem>
+              <SelectItem value="/driver/fisheye/right/compressed">
+                右侧摄像头
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </CardFooter>
-      </div>
+      </Card>
+
       {/* <TestWheel setAxes={setAxes} /> */}
     </div>
   );

@@ -12,7 +12,7 @@ import Gauge from "./Gauge";
 const CarSpeed = () => {
   return (
     <div className="mt-2">
-      <Gauge value={100} min={0} max={100} label="Speed" units="m/s" />
+      <Gauge value={100} min={0} max={100} label="Speed" units="km/s" />
     </div>
   );
 };

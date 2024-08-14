@@ -49,23 +49,23 @@ const Control = () => {
 
   useEffect(() => {
     const peer = new Peer("cyber-control-peer-id", {
-      host: "111.186.56.118",
-      port: 9000,
+      host: "cyberc3-cloud-server.sjtu.edu.cn",
+      port: 443,
       path: "/cyber",
-      secure: false,
+      secure: true,
       debug: 3,
       config: {
         iceServers: [
           {
-            urls: "turn:111.186.56.118:3478",
+            urls: "turn:asia-east.relay.metered.ca:80",
+            username: "c0f6e9eca6e8a8dd3ee14525",
+            credential: "Yr/JEAAWgXYEg4AW",
+          },
+          {
+            urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
             username: "test",
             credential: "123456",
           },
-          // {
-          //   urls: "turn:asia-east.relay.metered.ca:80",
-          //   username: "c0f6e9eca6e8a8dd3ee14525",
-          //   credential: "Yr/JEAAWgXYEg4AW",
-          // },
         ],
       },
     });
@@ -181,19 +181,19 @@ const Control = () => {
                 <SelectValue placeholder="选择摄像头" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="/miivii_gmsl_ros_front_camera/front_camera/compressed">
+                <SelectItem value="/driver/fisheye/front/compressed">
                   前置摄像头
                 </SelectItem>
-                <SelectItem value="/miivii_gmsl_ros/camera1/compressed">
+                <SelectItem value="/driver/fisheye/avm/compressed">
                   摄像头1
                 </SelectItem>
-                <SelectItem value="/miivii_gmsl_ros/camera2/compressed">
+                <SelectItem value="/driver/fisheye/left/compressed">
                   摄像头2
                 </SelectItem>
-                <SelectItem value="/miivii_gmsl_ros/camera3/compressed">
+                <SelectItem value="/driver/fisheye/right/compressed">
                   摄像头3
                 </SelectItem>
-                <SelectItem value="/miivii_gmsl_ros/camera4/compressed">
+                <SelectItem value="/driver/fisheye/back/compressed">
                   摄像头4
                 </SelectItem>
               </SelectContent>

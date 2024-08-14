@@ -8,7 +8,7 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
   const [peerId, setPeerId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [receivedCommand, setReceivedCommand] = useState<string>(
-    "/miivii_gmsl_ros_front_camera/front_camera/compressed"
+    "/driver/fisheye/avm/compressed"
   );
   const connRef = useRef<DataConnection | null>(null);
   const rosRef = useRef<ROSLIB.Ros | null>(null);
@@ -16,23 +16,23 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
 
   useEffect(() => {
     const peer = new Peer("cyber-car-peer-id", {
-      host: "111.186.56.118",
-      port: 9000,
+      host: "cyberc3-cloud-server.sjtu.edu.cn",
+      port: 443,
       path: "/cyber",
-      secure: false,
+      secure: true,
       debug: 3,
       config: {
         iceServers: [
           {
-            urls: "turn:111.186.56.118:3478",
+            urls: "turn:asia-east.relay.metered.ca:80",
+            username: "c0f6e9eca6e8a8dd3ee14525",
+            credential: "Yr/JEAAWgXYEg4AW",
+          },
+          {
+            urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
             username: "test",
             credential: "123456",
           },
-          // {
-          //   urls: "turn:asia-east.relay.metered.ca:80",
-          //   username: "c0f6e9eca6e8a8dd3ee14525",
-          //   credential: "Yr/JEAAWgXYEg4AW",
-          // },
         ],
       },
     });
