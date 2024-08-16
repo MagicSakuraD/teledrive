@@ -9,9 +9,10 @@ const Car = ({ remotePeerId = "control-001" }) => {
   const [connected, setConnected] = useState(false);
   const connRef = useRef<DataConnection | null>(null);
   const rosRef = useRef<ROSLIB.Ros | null>(null);
-  const imageListenerRefs = useRef<ROSLIB.Topic | null>(null);
-  const secondImageListenerRef = useRef<ROSLIB.Topic | null>(null);
+  const imageListenerRef = useRef<ROSLIB.Topic | null>(null);
+
   const [feedback_sp, setSpeed] = useState<number | null>(0);
+
   // 使用 useRef 存储接收到的控制数据
   const controlDataRef = useRef({
     rotation: 0,
@@ -30,13 +31,6 @@ const Car = ({ remotePeerId = "control-001" }) => {
     "/driver/fisheye/front/compressed"
   );
 
-  // const cameraTopics = [
-  //   "/driver/fisheye/avm/compressed",
-  //   // "/driver/fisheye/front/compressed",
-  //   // "/driver/fisheye/left/compressed",
-  //   // "/driver/fisheye/right/compressed",
-  //   // "/driver/fisheye/back/compressed",
-  // ];
   const avmCameraTopic = "/driver/fisheye/avm/compressed";
 
   useEffect(() => {
@@ -114,7 +108,6 @@ const Car = ({ remotePeerId = "control-001" }) => {
               break;
 
             case "fisheye":
-              console.log("接收到新的摄像头话题:", receivedData);
               // Type assertion for the "fisheye" topic
               const fisheyeUrl = receivedData as string;
               setReceivedCamera(fisheyeUrl);
@@ -177,6 +170,8 @@ const Car = ({ remotePeerId = "control-001" }) => {
         );
 
         if (connRef.current && connRef.current.open) {
+          const timestamp = Date.now();
+          console.log(`发送时间戳: ${timestamp}`);
           connRef.current.send({
             topic: "avm_camera",
             data: new Uint8Array(arrayBuffer),
@@ -270,13 +265,19 @@ const Car = ({ remotePeerId = "control-001" }) => {
     if (rosRef.current) {
       // 初始化或获取控制 topic
       //切换视角
-      const secondImageListener = new ROSLIB.Topic({
+      if (imageListenerRef.current) {
+        imageListenerRef.current.unsubscribe();
+      }
+
+      imageListenerRef.current = new ROSLIB.Topic({
         ros: rosRef.current,
         name: receivedCamera,
         messageType: "sensor_msgs/CompressedImage",
       });
+      console.log(`订阅后话题🤑: ${receivedCamera}`);
 
-      secondImageListener.subscribe((message: any) => {
+      imageListenerRef.current.subscribe((message: any) => {
+        // console.log("收到新的图像消息");
         // 将 Base64 编码的字符串解码为二进制数据
         const buffer = Buffer.from(message.data, "base64");
         // 从 Buffer 对象中提取 ArrayBuffer
@@ -293,8 +294,8 @@ const Car = ({ remotePeerId = "control-001" }) => {
         }
       });
       return () => {
-        if (secondImageListener) {
-          secondImageListener.unsubscribe();
+        if (imageListenerRef.current) {
+          imageListenerRef.current.unsubscribe();
         }
       };
     }

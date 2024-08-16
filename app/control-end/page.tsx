@@ -54,8 +54,33 @@ const ControlEnd = () => {
   const [currentGear, setCurrentGear] = useState<string>("N");
   // 用于保存反馈速度的 state
   const [feedbackSpeed, setFeedbackSpeed] = useState<number>(0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const secondCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const cameraTopic = "/driver/fisheye/avm/compressed";
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const setCanvasSize = (
+    canvasRef: React.MutableRefObject<HTMLCanvasElement | null>
+  ) => {
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+
+      // 获取设备像素比
+      const devicePixelRatio = window.devicePixelRatio || 1;
+
+      // 获取 CSS 尺寸
+      const rect = canvas.getBoundingClientRect();
+
+      // 根据设备像素比调整 canvas 的实际尺寸
+      canvas.width = rect.width * devicePixelRatio;
+      canvas.height = rect.height * devicePixelRatio;
+
+      // 缩放画布，以便绘制图像时保持清晰度
+      context!.scale(devicePixelRatio, devicePixelRatio);
+    }
+  };
 
   useEffect(() => {
     const peer = new Peer("control-001", {
@@ -103,28 +128,51 @@ const ControlEnd = () => {
               setFeedbackSpeed(receivedData); // 你可以将接收到的速度信息更新到状态中
               break;
             case "avm_camera":
-              // 处理图像数据
               const blob = new Blob([receivedData], { type: "image/jpeg" });
               const url = URL.createObjectURL(blob);
-              if (imgRef.current) {
-                if (imgRef.current.src) {
-                  URL.revokeObjectURL(imgRef.current.src);
+              const img = new Image();
+              img.src = url;
+              img.onload = () => {
+                if (canvasRef.current) {
+                  setCanvasSize(canvasRef); // 调整 canvas 大小
+                  const ctx = canvasRef.current.getContext("2d");
+                  if (ctx) {
+                    ctx.drawImage(
+                      img,
+                      0,
+                      0,
+                      canvasRef.current.width / window.devicePixelRatio, // 使用缩放后的尺寸
+                      canvasRef.current.height / window.devicePixelRatio // 使用缩放后的尺寸
+                    );
+                  }
+                  URL.revokeObjectURL(url);
                 }
-                imgRef.current.src = url;
-              }
+              };
               break;
+
             case "second_camera":
-              // 处理图像数据
               const blob_second = new Blob([receivedData], {
                 type: "image/jpeg",
               });
               const url_second = URL.createObjectURL(blob_second);
-              if (secondimgRef.current) {
-                if (secondimgRef.current.src) {
-                  URL.revokeObjectURL(secondimgRef.current.src);
+              const img_second = new Image();
+              img_second.src = url_second;
+              img_second.onload = () => {
+                if (secondCanvasRef.current) {
+                  setCanvasSize(secondCanvasRef); // 调整 canvas 大小
+                  const ctx = secondCanvasRef.current.getContext("2d");
+                  if (ctx) {
+                    ctx.drawImage(
+                      img_second,
+                      0,
+                      0,
+                      secondCanvasRef.current.width / window.devicePixelRatio, // 使用缩放后的尺寸
+                      secondCanvasRef.current.height / window.devicePixelRatio // 使用缩放后的尺寸
+                    );
+                  }
+                  URL.revokeObjectURL(url_second);
                 }
-                secondimgRef.current.src = url_second;
-              }
+              };
               break;
 
             default:
@@ -156,6 +204,22 @@ const ControlEnd = () => {
         peer.destroy();
       }
     };
+  }, []);
+
+  useEffect(() => {
+    let animationFrameId: number;
+
+    const updateCanvas = () => {
+      if (canvasRef.current && secondCanvasRef.current) {
+        // 这里是处理绘图更新或其他每帧逻辑的地方
+      }
+      animationFrameId = requestAnimationFrame(updateCanvas);
+    };
+
+    // 启动动画循环
+    animationFrameId = requestAnimationFrame(updateCanvas);
+
+    return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
   useEffect(() => {
@@ -223,11 +287,9 @@ const ControlEnd = () => {
       <Card className="overflow-hidden">
         <div className="flex flex-row items-center justify-center ">
           <div className="relative h-full w-[36%] ">
-            <img
-              src="/placeholder.svg"
-              ref={imgRef}
-              alt={`Received image from ${cameraTopic}`}
-              className="w-full h-full object-cover"
+            <canvas
+              ref={canvasRef}
+              className="w-full h-full object-cover aspect-square"
             />
             <div
               className="absolute bottom-24 left-1/2 transform -translate-x-1/2 translate-y-3/4
@@ -244,11 +306,9 @@ const ControlEnd = () => {
           </div>
           {/* 鱼眼相机 */}
           <div className="h-full w-[64%]">
-            <img
-              src="/placeholder.svg"
-              ref={secondimgRef}
-              alt="Received image Frame"
-              className="w-full h-full object-cover"
+            <canvas
+              ref={secondCanvasRef}
+              className="w-full h-full object-cover aspect-video"
             />
           </div>
         </div>

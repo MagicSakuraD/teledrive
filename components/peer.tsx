@@ -3,14 +3,7 @@ import React from "react";
 
 import { useEffect, useRef, useState } from "react";
 import Peer from "peerjs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 
@@ -22,7 +15,27 @@ const PeerPage = () => {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    const newPeer = new Peer();
+    const newPeer = new Peer({
+      host: "cyberc3-cloud-server.sjtu.edu.cn",
+      port: 443,
+      path: "/cyber",
+      secure: true,
+      debug: 2,
+      config: {
+        iceServers: [
+          {
+            urls: "turn:asia-east.relay.metered.ca:80",
+            username: "c0f6e9eca6e8a8dd3ee14525",
+            credential: "Yr/JEAAWgXYEg4AW",
+          },
+          {
+            urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
+            username: "test",
+            credential: "123456",
+          },
+        ],
+      },
+    });
 
     newPeer.on("open", (id) => {
       setMyPeerId(id);
@@ -38,12 +51,24 @@ const PeerPage = () => {
           }
           call.answer(stream);
           call.on("stream", (remoteStream) => {
-            console.log("i got remoteStream", remoteStream);
             if (remoteVideoRef.current) {
               remoteVideoRef.current.srcObject = remoteStream;
               remoteVideoRef.current.play();
             }
           });
+
+          // 在接收端监听数据通道的消息
+          call.peerConnection.ondatachannel = (event) => {
+            const dataChannel = event.channel;
+            dataChannel.onmessage = (e) => {
+              const { timestamp } = JSON.parse(e.data);
+              const currentTimestamp = performance.now();
+              const latency = currentTimestamp - timestamp;
+              console.log(`Received timestamp: ${timestamp} ms`);
+              console.log(`Current timestamp: ${currentTimestamp} ms`);
+              console.log(`Latency: ${latency} ms`);
+            };
+          };
         });
     });
 
@@ -62,13 +87,36 @@ const PeerPage = () => {
         }
         if (peer) {
           const call = peer.call(id, stream);
+          if (!call) {
+            console.error("Failed to make a call");
+            return;
+          }
+
+          // 创建一个RTCDataChannel来发送时间戳
+          const dataChannel = peer.connect(id);
+          dataChannel.on("open", () => {
+            const sendTimestamp = () => {
+              const timestamp = performance.now();
+              dataChannel.send(JSON.stringify({ timestamp }));
+              console.log(`Sent timestamp: ${timestamp} ms`);
+            };
+
+            // 每隔一段时间发送一个时间戳，或者在需要的时候发送
+            setInterval(sendTimestamp, 1000); // 1秒间隔发送
+          });
+
           call.on("stream", (remoteStream) => {
             if (remoteVideoRef.current) {
               remoteVideoRef.current.srcObject = remoteStream;
               remoteVideoRef.current.play();
             }
           });
+        } else {
+          console.error("Peer object is not initialized");
         }
+      })
+      .catch((error) => {
+        console.error("Failed to get user media:", error);
       });
   };
 
@@ -82,7 +130,6 @@ const PeerPage = () => {
           <CardContent>
             <video
               ref={myVideoRef}
-              // style={{ width: "300px", marginRight: "20px" }}
               className="bg-muted/50  rounded-lg w-full"
             />
           </CardContent>
