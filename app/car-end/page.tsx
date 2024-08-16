@@ -64,7 +64,7 @@ const Car = ({ remotePeerId = "control-001" }) => {
         label: "car-connection",
         metadata: { role: "car" },
         serialization: "binary",
-        reliable: true,
+        reliable: false,
       });
       connRef.current = conn;
       conn.on("open", () => {
@@ -170,8 +170,6 @@ const Car = ({ remotePeerId = "control-001" }) => {
         );
 
         if (connRef.current && connRef.current.open) {
-          const timestamp = Date.now();
-          console.log(`发送时间戳: ${timestamp}`);
           connRef.current.send({
             topic: "avm_camera",
             data: new Uint8Array(arrayBuffer),
@@ -277,7 +275,7 @@ const Car = ({ remotePeerId = "control-001" }) => {
       console.log(`订阅后话题🤑: ${receivedCamera}`);
 
       imageListenerRef.current.subscribe((message: any) => {
-        // console.log("收到新的图像消息");
+        console.log("收到新的图像消息");
         // 将 Base64 编码的字符串解码为二进制数据
         const buffer = Buffer.from(message.data, "base64");
         // 从 Buffer 对象中提取 ArrayBuffer

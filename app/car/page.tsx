@@ -45,7 +45,7 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
         label: "car-connection",
         metadata: { role: "car" },
         serialization: "binary",
-        reliable: true,
+        reliable: false,
       });
       connRef.current = conn;
       conn.on("open", () => {

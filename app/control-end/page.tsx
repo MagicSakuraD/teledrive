@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SelectTrigger } from "@radix-ui/react-select";
+import { Button } from "@/components/ui/button";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -57,8 +58,8 @@ const ControlEnd = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const secondCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const cameraTopic = "/driver/fisheye/avm/compressed";
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  // const cameraTopic = "/driver/fisheye/avm/compressed";
+  // const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const setCanvasSize = (
     canvasRef: React.MutableRefObject<HTMLCanvasElement | null>
@@ -252,7 +253,7 @@ const ControlEnd = () => {
           label: "control-connection",
           metadata: { role: "controller" },
           serialization: "binary",
-          reliable: true,
+          reliable: false,
         });
         connRef.current = conn;
 
@@ -279,6 +280,12 @@ const ControlEnd = () => {
   const switchTopic = (newTopic: string) => {
     if (connRef.current) {
       connRef.current.send({ topic: "fisheye", data: newTopic });
+    }
+  };
+
+  const reconnect = () => {
+    if (peerRef.current) {
+      peerRef.current.reconnect();
     }
   };
 
@@ -322,6 +329,12 @@ const ControlEnd = () => {
               </code>
             </p>
             <ConnectionStatus connected={connected} />
+
+            {!connected && (
+              <Button variant="outline" onClick={reconnect}>
+                重新连接
+              </Button>
+            )}
           </div>
 
           <Select onValueChange={switchTopic}>

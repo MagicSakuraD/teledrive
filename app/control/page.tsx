@@ -20,6 +20,7 @@ import Peer, { DataConnection } from "peerjs";
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { LoaderCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -123,7 +124,7 @@ const Control = () => {
           label: "control-connection",
           metadata: { role: "controller" },
           serialization: "binary",
-          reliable: true,
+          reliable: false,
         });
         connRef.current = conn;
 
