@@ -53,14 +53,7 @@ const Car = ({ remotePeerId = "cyber-control-peer-id" }) => {
         setConnected(true);
       });
       conn.on("data", (data: any) => {
-        const { topic, time } = data;
-        const currentTime = Date.now();
-        console.log(`车端时间时间: ${currentTime}, 控制端时间：${time}`);
-        const latency = currentTime - time;
-        console.log(`图像延迟: ${latency}ms`);
-        console.log(`接收到指令: ${data}`);
-
-        setReceivedCommand(topic as string);
+        setReceivedCommand(data as string);
         // Handle the received command to control the car
       });
       conn.on("error", (error) => {

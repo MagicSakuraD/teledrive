@@ -1,10 +1,10 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Peer, DataConnection } from "peerjs";
+import Peer, { DataConnection, MediaConnection } from "peerjs";
 import ROSLIB from "roslib";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const Car = ({ remotePeerId = "control-001" }) => {
+const Car = ({ remotePeerId = "control-002" }) => {
   const [peerId, setPeerId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const connRef = useRef<DataConnection | null>(null);
@@ -17,6 +17,7 @@ const Car = ({ remotePeerId = "control-001" }) => {
   const controlDataRef = useRef({
     rotation: 0,
     brake: 0,
+
     throttle: 0,
     gear: "N",
   });
@@ -32,9 +33,48 @@ const Car = ({ remotePeerId = "control-001" }) => {
   );
 
   const avmCameraTopic = "/driver/fisheye/avm/compressed";
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const peerRef = useRef<Peer | null>(null);
+
+  const [callStarted, setCallStarted] = useState(false);
+  const mediaConnectionRef = useRef<MediaConnection | null>(null);
+  // UseRefs to store the latest images
+  const avmImageRef = useRef<HTMLImageElement | null>(null);
+  const receivedImageRef = useRef<HTMLImageElement | null>(null);
+
+  const drawImagesOnCanvas = (ctx: CanvasRenderingContext2D | null) => {
+    if (canvasRef.current && avmImageRef.current && receivedImageRef.current) {
+      const avmImage = avmImageRef.current;
+      const receivedImage = receivedImageRef.current;
+
+      const imageHeight = avmImage.height;
+      const imageWidth = avmImage.width;
+      const secondImageWidth = receivedImage.width;
+
+      if (
+        canvasRef.current.width !== secondImageWidth + imageWidth ||
+        canvasRef.current.height !== imageHeight
+      ) {
+        canvasRef.current.width = secondImageWidth + imageWidth;
+        canvasRef.current.height = imageHeight;
+      }
+
+      if (ctx) {
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        ctx.drawImage(avmImage, 0, 0, imageWidth, imageHeight);
+        ctx.drawImage(
+          receivedImage,
+          imageWidth,
+          0,
+          secondImageWidth,
+          imageHeight
+        );
+      }
+    }
+  };
 
   useEffect(() => {
-    const peer = new Peer("car-001", {
+    const peer = new Peer("car-002", {
       host: "cyberc3-cloud-server.sjtu.edu.cn",
       port: 443,
       path: "/cyber",
@@ -55,6 +95,10 @@ const Car = ({ remotePeerId = "control-001" }) => {
         ],
       },
     });
+
+    if (peer) {
+      peerRef.current = peer;
+    }
 
     peer.on("open", (id) => {
       setPeerId(id);
@@ -154,7 +198,26 @@ const Car = ({ remotePeerId = "control-001" }) => {
 
     if (connected) {
       // 订阅合成视角相机话题
-      if (!rosRef.current) return;
+      if (!rosRef.current || !canvasRef.current) return;
+
+      const ctx = canvasRef.current.getContext("2d");
+      const videoStream = canvasRef.current.captureStream();
+
+      if (!callStarted && peerRef.current && peerRef.current.open) {
+        const call = peerRef.current.call(remotePeerId, videoStream);
+        mediaConnectionRef.current = call;
+        setCallStarted(true);
+
+        call.on("close", () => {
+          console.log("Call closed");
+          setCallStarted(false);
+        });
+
+        call.on("error", (err) => {
+          console.error("Call error:", err);
+          setCallStarted(false);
+        });
+      }
 
       const imageListener = new ROSLIB.Topic({
         ros: rosRef.current,
@@ -163,18 +226,13 @@ const Car = ({ remotePeerId = "control-001" }) => {
       });
 
       imageListener.subscribe((message: any) => {
-        const buffer = Buffer.from(message.data, "base64");
-        const arrayBuffer = buffer.buffer.slice(
-          buffer.byteOffset,
-          buffer.byteOffset + buffer.byteLength
-        );
+        const avmImage = new Image();
+        avmImage.src = `data:image/jpeg;base64,${message.data}`;
 
-        if (connRef.current && connRef.current.open) {
-          connRef.current.send({
-            topic: "avm_camera",
-            data: new Uint8Array(arrayBuffer),
-          });
-        }
+        avmImage.onload = () => {
+          avmImageRef.current = avmImage;
+          drawImagesOnCanvas(ctx);
+        };
       });
 
       // 订阅速度反馈话题
@@ -221,17 +279,36 @@ const Car = ({ remotePeerId = "control-001" }) => {
           const controlDataMessage = new ROSLIB.Message({
             is_updated: true,
             enable_auto_steer: true,
-            steer_cmd: controlDataRef.current.rotation,
+            steer_cmd: controlDataRef.current.rotation * -1,
           });
 
           controlTopic.publish(controlDataMessage);
+
+          let gear_num: number = 0;
+          switch (controlDataRef.current.gear) {
+            case "D":
+              gear_num = 1;
+              break;
+            case "R":
+              gear_num = 2;
+              break;
+            case "N":
+              gear_num = 0;
+              break;
+            case "p":
+              gear_num = 0;
+              break;
+            default:
+              gear_num = 0;
+              break;
+          }
 
           const speedDataMessage = new ROSLIB.Message({
             is_updated: true,
             enable_auto_speed: true,
             speed_cmd: controlDataRef.current.throttle * 1000,
             acc_cmd: 0,
-            gear: 1,
+            gear: gear_num,
           });
 
           speedTopic.publish(speedDataMessage);
@@ -251,6 +328,11 @@ const Car = ({ remotePeerId = "control-001" }) => {
 
       return () => {
         imageListener.unsubscribe();
+
+        if (mediaConnectionRef.current) {
+          mediaConnectionRef.current.close();
+          mediaConnectionRef.current = null;
+        }
         feedbackListener.unsubscribe();
         controlTopic.unsubscribe();
         speedTopic.unsubscribe();
@@ -275,21 +357,12 @@ const Car = ({ remotePeerId = "control-001" }) => {
       console.log(`订阅后话题🤑: ${receivedCamera}`);
 
       imageListenerRef.current.subscribe((message: any) => {
-        console.log("收到新的图像消息");
-        // 将 Base64 编码的字符串解码为二进制数据
-        const buffer = Buffer.from(message.data, "base64");
-        // 从 Buffer 对象中提取 ArrayBuffer
-        const arrayBuffer = buffer.buffer.slice(
-          buffer.byteOffset,
-          buffer.byteOffset + buffer.byteLength
-        );
-        // 检查连接是否打开，然后发送 ArrayBuffer
-        if (connRef.current && connRef.current.open) {
-          connRef.current.send({
-            topic: "second_camera",
-            data: new Uint8Array(arrayBuffer),
-          });
-        }
+        const receivedImage = new Image();
+        receivedImage.src = `data:image/jpeg;base64,${message.data}`;
+
+        receivedImage.onload = () => {
+          receivedImageRef.current = receivedImage;
+        };
       });
       return () => {
         if (imageListenerRef.current) {
@@ -305,6 +378,7 @@ const Car = ({ remotePeerId = "control-001" }) => {
         <CardTitle>车端的控制指令</CardTitle>
       </CardHeader>
       <CardContent>
+        <canvas ref={canvasRef} className="" />
         <p>Peer ID: {peerId}</p>
         <p>Status: {connected ? "已连接" : "未连接"}</p>
         <p>转向: {Math.floor(showControl.rotation)}°</p>

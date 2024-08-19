@@ -1,6 +1,6 @@
 "use client";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { CircleCheck, LoaderCircle } from "lucide-react";
+import { CircleCheck, LoaderCircle, Wifi } from "lucide-react";
 
 import React, { useEffect, useRef, useState } from "react";
 import Peer, { DataConnection } from "peerjs";
@@ -13,9 +13,11 @@ import {
   SelectContent,
   SelectItem,
   SelectValue,
+  SelectTrigger,
 } from "@/components/ui/select";
-import { SelectTrigger } from "@radix-ui/react-select";
+import {} from "@radix-ui/react-select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -28,7 +30,7 @@ const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
       </div>
     ) : (
       <div className="flex flex-row gap-1 justify-center items-center">
-        <LoaderCircle className=" animate-spin w-4 h-4" />
+        <LoaderCircle className="animate-spin w-4 h-4" />
         连接中...
       </div>
     )}
@@ -37,9 +39,7 @@ const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
 
 const ControlEnd = () => {
   const [myPeerId, setMyPeerId] = useState("");
-  const [remotePeerId, setRemotePeerId] = useState("car-001");
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const secondimgRef = useRef<HTMLImageElement>(null);
+  const [remotePeerId, setRemotePeerId] = useState("car-002");
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const [connected, setConnected] = useState(false);
@@ -58,33 +58,13 @@ const ControlEnd = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const secondCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // const cameraTopic = "/driver/fisheye/avm/compressed";
-  // const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  const setCanvasSize = (
-    canvasRef: React.MutableRefObject<HTMLCanvasElement | null>
-  ) => {
-    if (canvasRef.current) {
-      const canvas = canvasRef.current;
-      const context = canvas.getContext("2d");
-
-      // 获取设备像素比
-      const devicePixelRatio = window.devicePixelRatio || 1;
-
-      // 获取 CSS 尺寸
-      const rect = canvas.getBoundingClientRect();
-
-      // 根据设备像素比调整 canvas 的实际尺寸
-      canvas.width = rect.width * devicePixelRatio;
-      canvas.height = rect.height * devicePixelRatio;
-
-      // 缩放画布，以便绘制图像时保持清晰度
-      context!.scale(devicePixelRatio, devicePixelRatio);
-    }
-  };
+  // 状态来存储延迟和丢包率
+  const [latency, setLatency] = useState<number | null>(null);
+  const [packetLoss, setPacketLoss] = useState<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    const peer = new Peer("control-001", {
+    const peer = new Peer("control-002", {
       host: "cyberc3-cloud-server.sjtu.edu.cn",
       port: 443,
       path: "/cyber",
@@ -112,6 +92,30 @@ const ControlEnd = () => {
       console.log(`控制端 peer ID: ${id}`);
     });
 
+    // Handle incoming calls
+    peer.on("call", (call) => {
+      call.answer(); // Answer the call without sending any media
+
+      call.on("stream", (remoteStream) => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = remoteStream;
+          videoRef.current.addEventListener("loadedmetadata", () => {
+            if (videoRef.current) {
+              videoRef.current.play(); // Play the stream after metadata is loaded
+            }
+          });
+        }
+      });
+
+      call.on("close", () => {
+        console.log("Call closed");
+      });
+
+      call.on("error", (err) => {
+        console.error("Call error:", err);
+      });
+    });
+
     peer.on("connection", (conn) => {
       connRef.current = conn;
 
@@ -128,53 +132,6 @@ const ControlEnd = () => {
               console.log("Received speed feedback:", receivedData);
               setFeedbackSpeed(receivedData); // 你可以将接收到的速度信息更新到状态中
               break;
-            case "avm_camera":
-              const blob = new Blob([receivedData], { type: "image/jpeg" });
-              const url = URL.createObjectURL(blob);
-              const img = new Image();
-              img.src = url;
-              img.onload = () => {
-                if (canvasRef.current) {
-                  setCanvasSize(canvasRef); // 调整 canvas 大小
-                  const ctx = canvasRef.current.getContext("2d");
-                  if (ctx) {
-                    ctx.drawImage(
-                      img,
-                      0,
-                      0,
-                      canvasRef.current.width / window.devicePixelRatio, // 使用缩放后的尺寸
-                      canvasRef.current.height / window.devicePixelRatio // 使用缩放后的尺寸
-                    );
-                  }
-                  URL.revokeObjectURL(url);
-                }
-              };
-              break;
-
-            case "second_camera":
-              const blob_second = new Blob([receivedData], {
-                type: "image/jpeg",
-              });
-              const url_second = URL.createObjectURL(blob_second);
-              const img_second = new Image();
-              img_second.src = url_second;
-              img_second.onload = () => {
-                if (secondCanvasRef.current) {
-                  setCanvasSize(secondCanvasRef); // 调整 canvas 大小
-                  const ctx = secondCanvasRef.current.getContext("2d");
-                  if (ctx) {
-                    ctx.drawImage(
-                      img_second,
-                      0,
-                      0,
-                      secondCanvasRef.current.width / window.devicePixelRatio, // 使用缩放后的尺寸
-                      secondCanvasRef.current.height / window.devicePixelRatio // 使用缩放后的尺寸
-                    );
-                  }
-                  URL.revokeObjectURL(url_second);
-                }
-              };
-              break;
 
             default:
               console.warn("收到的不是预期的数据格式");
@@ -188,6 +145,7 @@ const ControlEnd = () => {
       conn.on("open", () => {
         console.log("连接成功");
         setConnected(true);
+        startStatsMonitoring(conn);
       });
 
       conn.on("close", () => {
@@ -289,35 +247,29 @@ const ControlEnd = () => {
     }
   };
 
+  const startStatsMonitoring = (conn: DataConnection) => {
+    const peerConnection = conn.peerConnection as RTCPeerConnection;
+    if (peerConnection) {
+      setInterval(async () => {
+        const stats = await peerConnection.getStats();
+        let latency = null;
+        stats.forEach((report) => {
+          // console.log(report);
+          if (report.type === "candidate-pair") {
+            latency = report.currentRoundTripTime;
+          }
+        });
+
+        setLatency(latency || null);
+      }, 1000); // 每秒更新一次
+    }
+  };
+
   return (
     <div className="min-[2400px]:w-7/12">
       <Card className="overflow-hidden">
-        <div className="flex flex-row items-center justify-center ">
-          <div className="relative h-full w-[36%] ">
-            <canvas
-              ref={canvasRef}
-              className="w-full h-full object-cover aspect-square"
-            />
-            <div
-              className="absolute bottom-24 left-1/2 transform -translate-x-1/2 translate-y-3/4
-        backdrop-blur-md bg-white/30 bg-opacity-30 backdrop-filter text-center z-10 w-5/6 h-1/6 md:h-20 rounded-md"
-            >
-              <Gamepad
-                axes={axes}
-                setAxes={setAxes}
-                currentGear={currentGear}
-                setCurrentGear={setCurrentGear}
-                feedbackSpeed={feedbackSpeed}
-              />
-            </div>
-          </div>
-          {/* 鱼眼相机 */}
-          <div className="h-full w-[64%]">
-            <canvas
-              ref={secondCanvasRef}
-              className="w-full h-full object-cover aspect-video"
-            />
-          </div>
+        <div className="">
+          <video ref={videoRef} className="w-full h-auto bg-black" />
         </div>
 
         <CardFooter className="flex flex-row justify-between py-2 w-full">

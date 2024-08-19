@@ -18,6 +18,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 const chartData = [
   { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
 ];
@@ -32,7 +40,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function Component() {
+export default function Component() {
   return (
     <Card className="flex flex-col">
       <CardHeader className="items-center pb-0">
@@ -40,6 +48,17 @@ export function Component() {
         <CardDescription>January - June 2024</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
+        <Select>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Theme" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="light">Light</SelectItem>
+            <SelectItem value="dark">Dark</SelectItem>
+            <SelectItem value="system">System</SelectItem>
+          </SelectContent>
+        </Select>
+
         <ChartContainer
           config={chartConfig}
           className="mx-auto aspect-square max-h-[250px]"
