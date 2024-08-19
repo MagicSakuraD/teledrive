@@ -9,11 +9,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CircleAlert } from "lucide-react";
-import Wheel from "./Wheel";
 import Pedal from "./Pedal";
 import GearShift from "./GearShift";
 import CarSpeed from "./CarSpeed";
 import Gauge from "./Gauge";
+import { Button } from "@/components/ui/button";
+import SteerWheel from "./SteerWheel";
 
 interface GamepadProps {
   axes: {
@@ -43,6 +44,17 @@ const Gamepad: React.FC<GamepadProps> = ({
   const [gamepad, setGamepad] = useState<Gamepad | null>(null);
   const [isGamepadSupported, setIsGamepadSupported] = useState<boolean>(true);
   const [buttons, setButtons] = useState<boolean[]>([]);
+
+  const reconnectGamepad = () => {
+    const gamepads = navigator.getGamepads();
+    for (const gp of gamepads) {
+      if (gp && gp.id.includes("G923")) {
+        setGamepad(gp);
+        console.log("Gamepad reconnected:", gp);
+        break;
+      }
+    }
+  };
 
   useEffect(() => {
     // Check if the Gamepad API is supported
@@ -121,11 +133,10 @@ const Gamepad: React.FC<GamepadProps> = ({
         <>
           {gamepad ? (
             <div className="flex flex-row justify-around gap-2 w-full items-center">
-              {/* <Wheel rotation={axes.rotation} />
-                  <Pedal brake={axes.brake} throttle={axes.throttle} /> */}
-              <div className="w-3">{axes.rotation}</div>
-              <div className="w-3">{axes.brake}</div>
-              <div className="w-3">{axes.throttle}</div>
+              <Pedal brake={axes.brake} throttle={axes.throttle} />
+
+              <div className="w-3">电量</div>
+              <SteerWheel rotation={axes.rotation} />
               <GearShift gear={currentGear} />
               <Gauge
                 value={feedbackSpeed}
@@ -136,9 +147,14 @@ const Gamepad: React.FC<GamepadProps> = ({
               />
             </div>
           ) : (
-            <div className="text-foreground/80 flex flex-row gap-1 items-center justify-center w-full h-20">
-              <CircleAlert color="#ea580c" className="w-5 h-5" />
-              未连接游戏手柄
+            <div className="flex flex-row items-center justify-center w-full h-20">
+              <div className="text-foreground/80 flex flex-row gap-1 items-center justify-center w-full mb-2">
+                <CircleAlert color="#ea580c" className="w-5 h-5" />
+                未连接游戏手柄
+                <Button onClick={reconnectGamepad} className="ml-4">
+                  重连手柄
+                </Button>
+              </div>
             </div>
           )}
         </>

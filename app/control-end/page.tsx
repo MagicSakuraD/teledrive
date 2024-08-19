@@ -59,7 +59,7 @@ const ControlEnd = () => {
   const secondCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // 状态来存储延迟和丢包率
-  const [latency, setLatency] = useState<number | null>(null);
+  const [latency, setLatency] = useState<number>(0);
   const [packetLoss, setPacketLoss] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -252,7 +252,7 @@ const ControlEnd = () => {
     if (peerConnection) {
       setInterval(async () => {
         const stats = await peerConnection.getStats();
-        let latency = null;
+        let latency = 0;
         stats.forEach((report) => {
           // console.log(report);
           if (report.type === "candidate-pair") {
@@ -260,16 +260,25 @@ const ControlEnd = () => {
           }
         });
 
-        setLatency(latency || null);
+        setLatency(latency || 0);
       }, 1000); // 每秒更新一次
     }
   };
 
   return (
-    <div className="min-[2400px]:w-7/12">
+    <div className="w-full min-[2400px]:w-7/12 flex flex-col gap-3">
       <Card className="overflow-hidden">
-        <div className="">
+        <div className="relative">
           <video ref={videoRef} className="w-full h-auto bg-black" />
+          <Badge
+            variant={"outline"}
+            className="absolute border-none top-0 right-0 flex flex-row gap-1 items-center text-green-600 z-10"
+          >
+            <Wifi className="w-4 h-4" />
+            <p className="text-xs">
+              延迟: <b className="">{`${latency * 1000} ms`}</b>
+            </p>
+          </Badge>
         </div>
 
         <CardFooter className="flex flex-row justify-between py-2 w-full">
@@ -309,6 +318,18 @@ const ControlEnd = () => {
             </SelectContent>
           </Select>
         </CardFooter>
+      </Card>
+
+      <Card>
+        <div className="flex flex-row gap-4 p-3">
+          <Gamepad
+            axes={axes}
+            setAxes={setAxes}
+            currentGear={currentGear}
+            setCurrentGear={setCurrentGear}
+            feedbackSpeed={feedbackSpeed}
+          />
+        </div>
       </Card>
 
       {/* <TestWheel setAxes={setAxes} /> */}
