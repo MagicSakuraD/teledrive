@@ -60,8 +60,9 @@ const ControlEnd = () => {
 
   // 状态来存储延迟和丢包率
   const [latency, setLatency] = useState<number>(0);
-  const [packetLoss, setPacketLoss] = useState<number | null>(null);
+  // const [packetLoss, setPacketLoss] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const peer = new Peer("control-002", {
@@ -129,7 +130,7 @@ const ControlEnd = () => {
           switch (topic) {
             case "feedback_sp":
               // 如果接收到的是速度反馈信息
-              console.log("Received speed feedback:", receivedData);
+
               setFeedbackSpeed(receivedData); // 你可以将接收到的速度信息更新到状态中
               break;
 
@@ -233,6 +234,12 @@ const ControlEnd = () => {
         console.log("尝试连接", remotePeerId);
       }
     }
+
+    return () => {
+      if (connRef.current) {
+        stopStatsMonitoring();
+      }
+    };
   }, [remotePeerId, connected]);
 
   const switchTopic = (newTopic: string) => {
@@ -250,23 +257,26 @@ const ControlEnd = () => {
   const startStatsMonitoring = (conn: DataConnection) => {
     const peerConnection = conn.peerConnection as RTCPeerConnection;
     if (peerConnection) {
-      setInterval(async () => {
+      intervalRef.current = setInterval(async () => {
         const stats = await peerConnection.getStats();
-        let latency = 0;
         stats.forEach((report) => {
-          // console.log(report);
           if (report.type === "candidate-pair") {
-            latency = report.currentRoundTripTime;
+            setLatency(report.currentRoundTripTime);
           }
         });
-
-        setLatency(latency || 0);
       }, 1000); // 每秒更新一次
     }
   };
 
+  const stopStatsMonitoring = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
   return (
-    <div className="w-full min-[2400px]:w-7/12 flex flex-col gap-3">
+    <div className="w-full min-[2400px]:w-6/12 flex flex-col gap-3">
       <Card className="overflow-hidden">
         <div className="relative">
           <video ref={videoRef} className="w-full h-auto bg-black" />

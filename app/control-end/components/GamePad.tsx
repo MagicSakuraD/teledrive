@@ -11,7 +11,7 @@ import {
 import { CircleAlert } from "lucide-react";
 import Pedal from "./Pedal";
 import GearShift from "./GearShift";
-import CarSpeed from "./CarSpeed";
+
 import Gauge from "./Gauge";
 import { Button } from "@/components/ui/button";
 import SteerWheel from "./SteerWheel";
@@ -139,11 +139,11 @@ const Gamepad: React.FC<GamepadProps> = ({
               <SteerWheel rotation={axes.rotation} />
               <GearShift gear={currentGear} />
               <Gauge
-                value={feedbackSpeed}
+                value={parseFloat((feedbackSpeed * 0.036).toFixed(1))}
                 min={0}
                 max={100}
                 label="Speed"
-                units="km/s"
+                units="km/h"
               />
             </div>
           ) : (

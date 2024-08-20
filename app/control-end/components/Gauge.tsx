@@ -55,7 +55,7 @@ const Gauge: React.FC<GaugeProps> = ({ value, min, max, label, units }) => {
     >
       <svg
         style={{ overflow: "visible" }}
-        width="5em"
+        width="6rem"
         viewBox={[-1, -1, 2, 1].join(" ")}
       >
         <defs>

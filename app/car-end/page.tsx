@@ -47,24 +47,26 @@ const Car = ({ remotePeerId = "control-002" }) => {
       const avmImage = avmImageRef.current;
       const receivedImage = receivedImageRef.current;
 
+      const radio = avmImage.height / receivedImage.height;
       const imageHeight = avmImage.height;
-      const imageWidth = avmImage.width;
-      const secondImageWidth = receivedImage.width;
+
+      const avmimageWidth = avmImage.width;
+      const secondImageWidth = receivedImage.width * radio;
 
       if (
-        canvasRef.current.width !== secondImageWidth + imageWidth ||
+        canvasRef.current.width !== secondImageWidth + avmimageWidth ||
         canvasRef.current.height !== imageHeight
       ) {
-        canvasRef.current.width = secondImageWidth + imageWidth;
+        canvasRef.current.width = secondImageWidth + avmimageWidth;
         canvasRef.current.height = imageHeight;
       }
 
       if (ctx) {
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        ctx.drawImage(avmImage, 0, 0, imageWidth, imageHeight);
+        ctx.drawImage(avmImage, 0, 0, avmimageWidth, imageHeight);
         ctx.drawImage(
           receivedImage,
-          imageWidth,
+          avmimageWidth,
           0,
           secondImageWidth,
           imageHeight
@@ -243,13 +245,13 @@ const Car = ({ remotePeerId = "control-002" }) => {
       });
 
       feedbackListener.subscribe((message: any) => {
-        if (message && message.speed) {
-          setSpeed(message.speed_kmh);
+        if (message) {
+          setSpeed(message.speed_cms);
 
           if (connRef.current && connRef.current.open) {
             connRef.current.send({
               topic: "feedback_sp",
-              data: message.speed_kmh,
+              data: message.speed_cms,
             });
           }
         }
