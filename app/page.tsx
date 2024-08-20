@@ -15,7 +15,8 @@ import Link from "next/link";
 
 export default function Dashboard() {
   return (
-    <div className="container max-w-[60rem]">
+    <div className="container max-w-[60rem] flex flex-col justify-between items-center">
+      <div></div>
       <RadioGroup
         defaultValue="card"
         className="flex flex-col gap-4 md:flex-row"
@@ -45,6 +46,14 @@ export default function Dashboard() {
           </Link>
         </div>
       </RadioGroup>
+      <footer className="absolute inset-x-0 bottom-2 text-center text-sm text-muted-foreground">
+        <div className="flex flex-row items-center gap-2 justify-center">
+          <p className="text-xs">© 2024 CyberC3 Intelligent Vehicle Lab.</p>
+          <p className="text-xs">
+            <span className="font-medium">沪交ICP备</span>20240195
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

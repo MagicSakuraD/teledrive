@@ -377,18 +377,18 @@ const Car = ({ remotePeerId = "control-002" }) => {
   return (
     <Card className="min-w-[600px]">
       <CardHeader>
-        <CardTitle>车端的控制指令</CardTitle>
+        <CardTitle>车端信息</CardTitle>
       </CardHeader>
       <CardContent>
         <canvas ref={canvasRef} className="" />
-        <p>Peer ID: {peerId}</p>
-        <p>Status: {connected ? "已连接" : "未连接"}</p>
+        <p>车端ID: {peerId}</p>
+        <p>状态: {connected ? "已连接" : "未连接"}</p>
         <p>转向: {Math.floor(showControl.rotation)}°</p>
         <p>刹车: {Math.floor(showControl.brake * 100)}%</p>
         <p>油门: {Math.floor(showControl.throttle * 100)}%</p>
         <p>挡位: {showControl.gear}</p>
-        <p>速度：{feedback_sp}</p>
-        <p>摄像头： {receivedCamera}</p>
+        <p>速度：{feedback_sp} cm/s</p>
+        <p>摄像头：{receivedCamera}</p>
       </CardContent>
     </Card>
   );

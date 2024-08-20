@@ -161,6 +161,8 @@ const ControlEnd = () => {
 
     return () => {
       if (peer) {
+        stopStatsMonitoring();
+
         peer.destroy();
       }
     };
@@ -234,12 +236,6 @@ const ControlEnd = () => {
         console.log("尝试连接", remotePeerId);
       }
     }
-
-    return () => {
-      if (connRef.current) {
-        stopStatsMonitoring();
-      }
-    };
   }, [remotePeerId, connected]);
 
   const switchTopic = (newTopic: string) => {
@@ -262,6 +258,7 @@ const ControlEnd = () => {
         stats.forEach((report) => {
           if (report.type === "candidate-pair") {
             setLatency(report.currentRoundTripTime);
+            // console.log(report.currentRoundTripTime);
           }
         });
       }, 1000); // 每秒更新一次
@@ -269,6 +266,7 @@ const ControlEnd = () => {
   };
 
   const stopStatsMonitoring = () => {
+    console.log("停止监控");
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
