@@ -28,6 +28,7 @@
     "boring-avatars": "^1.10.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "jotai": "^2.9.3",
     "lucide-react": "^0.395.0",
     "next": "14.2.4",
     "next-auth": "^5.0.0-beta.20",

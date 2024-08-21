@@ -274,10 +274,10 @@ const ControlEnd = () => {
   };
 
   return (
-    <div className="w-full min-[2400px]:w-6/12 flex flex-col gap-3">
+    <div className="w-full min-[2560px]:w-5/12 flex flex-col gap-3">
       <Card className="overflow-hidden">
         <div className="relative">
-          <video ref={videoRef} className="w-full h-auto bg-black" />
+          <video ref={videoRef} className="w-full h-auto" controls />
           <Badge
             variant={"outline"}
             className="absolute border-none top-0 right-0 flex flex-row gap-1 items-center text-green-600 z-10"
@@ -298,14 +298,13 @@ const ControlEnd = () => {
               </code>
             </p>
             <ConnectionStatus connected={connected} />
-
+            {/* 
             {!connected && (
               <Button variant="outline" onClick={reconnect}>
                 重新连接
               </Button>
-            )}
+            )} */}
           </div>
-
           <Select onValueChange={switchTopic}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="选择摄像头" />

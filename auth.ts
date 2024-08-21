@@ -9,7 +9,7 @@ import bcrypt from "bcrypt";
 import { LoginSchema } from "@/lib/schema";
 
 export const { auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  // adapter: PrismaAdapter(prisma),
   ...authConfig,
   providers: [
     Credentials({

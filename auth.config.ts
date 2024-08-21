@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 import GitHub from "next-auth/providers/github";
+import { NextResponse } from "next/server";
 
 export const authConfig: NextAuthConfig = {
   pages: {
@@ -18,6 +19,13 @@ export const authConfig: NextAuthConfig = {
           return true; // Allow access to protected pages
         }
         return false; // Redirect unauthenticated users to login page
+      } else if (isLoggedIn && nextUrl.pathname.includes("/login")) {
+        // if (nextUrl.pathname.endsWith("control-end")) {
+        //   return NextResponse.redirect(new URL("/control-end", nextUrl));
+        // } else if (nextUrl.pathname.endsWith("car-end")) {
+        //   return NextResponse.redirect(new URL("/car-end", nextUrl));
+        // }
+        return NextResponse.redirect(new URL("/", nextUrl));
       }
 
       // Allow access to all other pages if not logged in
