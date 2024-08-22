@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Video, Triangle, CarFront } from "lucide-react";
+import {Triangle, CarFront } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -12,8 +12,8 @@ import {
 
 const AsideBar = () => {
   return (
-    <aside className="inset-y fixed  left-0 z-20 flex h-full flex-col border-r">
-      <div className="border-b p-2">
+    <aside className="inset-y fixed left-0 z-20 flex h-full flex-col border-r">
+      <div className="p-2 h-16">
         <Button variant="outline" size="icon" aria-label="Home">
           <Triangle className="size-5 fill-foreground" />
         </Button>

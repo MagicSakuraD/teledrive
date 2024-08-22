@@ -8,6 +8,7 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { Toaster } from "@/components/ui/toaster";
 import { Provider } from "jotai";
 import UserAvatar from "@/components/UserAvatar";
+import Headerbar from "@/components/headerbar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,18 +32,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TooltipProvider>
-            <div className="grid h-screen w-full pl-[56px]">
-              <AsideBar />
+            <div className="grid h-screen w-full">
               <div className="flex flex-col">
                 <Provider>
-                  <header className="sticky top-0 z-10 flex h-[57px] items-center justify-between border-b bg-background px-4">
-                    <h1 className="text-xl font-semibold">远程驾驶</h1>
-                    <div className="flex flex-row gap-3 justify-center items-center">
-                      <ModeToggle />
-                      <UserAvatar />
-                    </div>
-                  </header>
-                  <main className="flex p-4 justify-center w-full my-auto">
+                  <Headerbar />
+                  <main className="flex justify-center w-full my-auto h-full">
                     {children}
                   </main>
                 </Provider>

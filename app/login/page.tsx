@@ -15,22 +15,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/use-toast";
 import Image from "next/image";
 import Link from "next/link";
-import { Label } from "@/components/ui/label";
 import { FormError } from "@/components/form-error";
 import { FormSuccess } from "@/components/form-success";
 import { authenticate } from "@/lib/login";
 import { LoginSchema } from "@/lib/schema";
 import { useSetAtom } from "jotai";
 import { isLoggedInAtom } from "@/lib/atom";
+import { Card, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Home() {
   const [error, setError] = useState<string | undefined>("");
   const [success, setSuccess] = useState<string | undefined>("");
   const [isPending, startTransition] = useTransition();
   const setLoggedIn = useSetAtom(isLoggedInAtom);
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof LoginSchema>>({
     resolver: zodResolver(LoginSchema),
@@ -49,20 +50,18 @@ export default function Home() {
         setError(data.error);
         setSuccess(data.success);
         setLoggedIn(true);
+        toast({
+          title: "成功登录✔️",
+        });
       });
     });
   }
 
   return (
-    <div className="w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]">
-      <div className="flex items-center justify-center py-12">
-        <div className="mx-auto grid w-[350px] gap-6 mt-10">
-          <div className="grid gap-2 text-center">
-            <h1 className="text-3xl font-bold">登录</h1>
-            <p className="text-balance text-muted-foreground">
-              请在下方输入您的电子邮件以登录您的账户
-            </p>
-          </div>
+    <Card className="w-3/4 lg:grid lg:grid-cols-2 overflow-hidden h-3/4 my-auto">
+      <div className="flex items-center justify-center">
+        <div className="mx-auto grid w-1/2 gap-6 mt-10 py-6">
+          <CardTitle className="text-3xl font-bold text-center">登录</CardTitle>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <FormField
@@ -138,15 +137,15 @@ export default function Home() {
           </Form>
         </div>
       </div>
-      <div className="hidden bg-muted lg:block h-screen">
+      <div className="hidden lg:block h-full">
         <Image
-          src="/placeholder.svg"
+          src="/background.png"
           alt="Image"
           width="1920"
           height="1080"
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover"
         />
       </div>
-    </div>
+    </Card>
   );
 }

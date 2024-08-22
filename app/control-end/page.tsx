@@ -274,7 +274,7 @@ const ControlEnd = () => {
   };
 
   return (
-    <div className="w-full min-[2560px]:w-5/12 flex flex-col gap-3">
+    <div className="w-full xl:w-2/3  min-[2560px]:w-5/6 flex flex-col gap-3 p-3 my-auto">
       <Card className="overflow-hidden">
         <div className="relative">
           <video ref={videoRef} className="w-full h-auto" controls />

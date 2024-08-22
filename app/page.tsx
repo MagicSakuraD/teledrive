@@ -16,12 +16,12 @@ import Link from "next/link";
 export default function Dashboard() {
   return (
     <div className="container max-w-[60rem] flex flex-col justify-between items-center">
-      <div></div>
+      <div className=""></div>
       <RadioGroup
         defaultValue="card"
         className="flex flex-col gap-4 md:flex-row"
       >
-        <div className="min-w-96">
+        <div className="w-52 md:min-w-96">
           <RadioGroupItem value="paypal" id="paypal" className="peer sr-only" />
           <Link href="/control-end">
             <Label
@@ -33,7 +33,7 @@ export default function Dashboard() {
             </Label>
           </Link>
         </div>
-        <div className="min-w-96">
+        <div className="w-52 md:min-w-96">
           <RadioGroupItem value="apple" id="apple" className="peer sr-only" />
           <Link href="/car-end">
             <Label
@@ -46,9 +46,11 @@ export default function Dashboard() {
           </Link>
         </div>
       </RadioGroup>
-      <footer className="absolute inset-x-0 bottom-2 text-center text-sm text-muted-foreground">
+      <footer className="text-center text-sm text-muted-foreground">
         <div className="flex flex-row items-center gap-2 justify-center">
-          <p className="text-xs">© 2024 CyberC3 Intelligent Vehicle Lab.</p>
+          <p className="text-xs hidden xl:inline">
+            © 2024 CyberC3 Intelligent Vehicle Lab.
+          </p>
           <p className="text-xs">
             <span className="font-medium">沪交ICP备</span>20240195
           </p>
