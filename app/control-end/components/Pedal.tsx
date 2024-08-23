@@ -75,7 +75,7 @@ const Pedal = ({ brake, throttle }: { brake: number; throttle: number }) => {
             <LabelList
               position="insideLeft"
               dataKey="label"
-              fill="white"
+              fill="#7c3aed"
               offset={8}
               fontSize={12}
             />

@@ -132,10 +132,16 @@ const Gamepad: React.FC<GamepadProps> = ({
       {isGamepadSupported ? (
         <>
           {gamepad ? (
-            <div className="flex flex-row justify-around gap-2 w-full items-center">
+            <div className="flex flex-row justify-between gap-3 w-full items-center">
               <Pedal brake={axes.brake} throttle={axes.throttle} />
 
-              <div className="w-3">电量</div>
+              <div>
+                <div className="text-sm text-muted-foreground">转角</div>
+                <div className="text-xl font-bold tabular-nums leading-none w-5">
+                  {axes.rotation}°
+                </div>
+              </div>
+
               <SteerWheel rotation={axes.rotation} />
               <GearShift gear={currentGear} />
               <Gauge

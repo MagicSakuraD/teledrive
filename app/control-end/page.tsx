@@ -327,8 +327,8 @@ const ControlEnd = () => {
         </CardFooter>
       </Card>
 
-      <Card>
-        <div className="flex flex-row gap-4 p-3">
+      <Card className=" backdrop-blur-xl bg-background/30">
+        <div className="flex flex-row gap-4 p-2">
           <Gamepad
             axes={axes}
             setAxes={setAxes}
@@ -338,8 +338,6 @@ const ControlEnd = () => {
           />
         </div>
       </Card>
-
-      {/* <TestWheel setAxes={setAxes} /> */}
     </div>
   );
 };

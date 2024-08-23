@@ -58,7 +58,7 @@ export default function Home() {
   }
 
   return (
-    <Card className="w-3/4 lg:grid lg:grid-cols-2 overflow-hidden h-3/4 my-auto">
+    <Card className="w-3/4 lg:grid lg:grid-cols-2 overflow-hidden h-3/4 my-auto max-w-[1600px]		">
       <div className="flex items-center justify-center">
         <div className="mx-auto grid w-1/2 gap-6 mt-10 py-6">
           <CardTitle className="text-3xl font-bold text-center">登录</CardTitle>

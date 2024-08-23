@@ -56,7 +56,7 @@ function RegisterPage() {
   }
 
   return (
-    <main className="container mt-20">
+    <main className="container my-auto">
       <Card className="mx-auto max-w-sm">
         <CardHeader>
           <CardTitle className="text-xl">注册</CardTitle>

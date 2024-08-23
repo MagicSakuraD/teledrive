@@ -14,7 +14,12 @@ interface GearShiftProps {
 }
 
 const GearShift: React.FC<GearShiftProps> = ({ gear }) => {
-  return <div className="flex items-center">{gear}挡</div>;
+  return (
+    <div>
+      <div className="text-sm text-muted-foreground">挡位</div>
+      <div className="text-xl font-bold tabular-nums leading-none">{gear}</div>
+    </div>
+  );
 };
 
 export default GearShift;
