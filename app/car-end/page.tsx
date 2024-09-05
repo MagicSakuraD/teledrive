@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Peer, { DataConnection, MediaConnection } from "peerjs";
 import ROSLIB from "roslib";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import drawGuideLine from "@/lib/drawGuideLine";
 
 const Car = ({ remotePeerId = "control-002" }) => {
   const [peerId, setPeerId] = useState<string | null>(null);
@@ -17,7 +18,6 @@ const Car = ({ remotePeerId = "control-002" }) => {
   const controlDataRef = useRef({
     rotation: 0,
     brake: 0,
-
     throttle: 0,
     gear: "N",
   });
@@ -51,6 +51,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
       const imageHeight = avmImage.height;
 
       const avmimageWidth = avmImage.width;
+
       const secondImageWidth = receivedImage.width * radio;
 
       if (
@@ -64,12 +65,21 @@ const Car = ({ remotePeerId = "control-002" }) => {
       if (ctx) {
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
         ctx.drawImage(avmImage, 0, 0, avmimageWidth, imageHeight);
+
         ctx.drawImage(
           receivedImage,
           avmimageWidth,
           0,
           secondImageWidth,
           imageHeight
+        );
+
+        drawGuideLine(
+          avmimageWidth / 2,
+          imageHeight / 2,
+          controlDataRef.current.rotation / 15.58,
+          ctx,
+          controlDataRef.current.gear
         );
       }
     }
@@ -381,7 +391,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
           <CardTitle>车端信息</CardTitle>
         </CardHeader>
         <CardContent>
-          <canvas ref={canvasRef} className="" />
+          <canvas ref={canvasRef} className="w-full" />
           <p>车端ID: {peerId}</p>
           <p>状态: {connected ? "已连接" : "未连接"}</p>
           <p>转向: {Math.floor(showControl.rotation)}°</p>
