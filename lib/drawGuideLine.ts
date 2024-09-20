@@ -48,7 +48,10 @@ export default function drawGuideLine(
   const wheelbase = 185.5; // 轴距
   const width = 130.2; // 车辆宽度
 
+
+  angle = angle === 0 ? 0.01 : angle;//避免angle为0时
   // 将角度转换为弧度
+
   const angleRad = (angle * Math.PI) / 180;
 
   // 计算转向半径（到后轴中心）
@@ -56,7 +59,7 @@ export default function drawGuideLine(
   const frontTurnRadius = wheelbase / Math.sin(Math.abs(angleRad));
 
   // 计算内侧和外侧辅助线的半径
-  const innerRadius = Math.max(turningRadius - width / 2, 0); // 防止负值
+  const innerRadius = turningRadius - width / 2 // 防止负值
   const outerRadius = turningRadius + width / 2;
   const frontouterRadius = frontTurnRadius + (width / 2) * Math.cos(angleRad);
   const frontinnerRadius = frontTurnRadius - (width / 2) * Math.cos(angleRad);
@@ -84,7 +87,7 @@ export default function drawGuideLine(
       innerRadius,
       !turnRight
     );
-    if (Math.abs(angleRad) < 0.15) {
+    if (Math.abs(angleRad) < 0.6) {
       // 绘制外侧辅助线
       drawArc(
         ctx,
@@ -127,7 +130,7 @@ export default function drawGuideLine(
       turnRight
     );
 
-    if (Math.abs(angleRad) > 0.15) {
+    if (Math.abs(angleRad) > 0.6) {
       // 绘制后轮内侧辅助线
       drawArc(
         ctx,

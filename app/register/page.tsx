@@ -74,7 +74,7 @@ function RegisterPage() {
                     <FormControl>
                       <Input
                         disabled={isPending}
-                        placeholder="slam@example.com"
+                        placeholder="next@example.com"
                         type="email"
                         required
                         {...field}
@@ -96,7 +96,7 @@ function RegisterPage() {
                     <FormControl>
                       <Input
                         disabled={isPending}
-                        placeholder="slam"
+                        placeholder="next123456"
                         {...field}
                         type="password"
                         required
