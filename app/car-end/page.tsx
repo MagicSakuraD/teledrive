@@ -4,6 +4,8 @@ import Peer, { DataConnection, MediaConnection } from "peerjs";
 import ROSLIB from "roslib";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import drawGuideLine from "@/lib/drawGuideLine";
+import { set } from "zod";
+import { simplifyMarkers_tarj } from "@/lib/simplifyMarkers";
 
 const Car = ({ remotePeerId = "control-002" }) => {
   const [peerId, setPeerId] = useState<string | null>(null);
@@ -190,6 +192,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
     return () => {
       peer.destroy();
+      console.log("销毁车端 peer.");
     };
   }, [remotePeerId]); // 添加 remotePeerId 作为依赖项
 
@@ -267,10 +270,66 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
       });
 
-      // 控制话题
+      // 订阅道路话题normal_lane
+      const roadListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/visualization/hdmap/normal_lane",
+        messageType: "visualization_msgs/MarkerArray",
+      });
+
+      roadListener.subscribe((message: any) => {
+        if (message) {
+          // console.log("道路", message.markers);
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "road",
+              data: message.markers,
+            });
+          }
+        }
+      });
+
+      // 订阅车辆位置话题/visualization/localization
+      const localizationListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/visualization/localization",
+        messageType: "visualization_msgs/Marker",
+      });
+
+      localizationListener.subscribe((message: any) => {
+        if (message) {
+          console.log("车辆位置", message);
+          // if (connRef.current && connRef.current.open) {
+          //   connRef.current.send({
+          //     topic: "localization",
+          //     data: message,
+          //   });
+          // }
+        }
+      });
+
+      // 订阅车辆轨迹话题traj
+      const trajListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/visulization/traj",
+        messageType: "visualization_msgs/MarkerArray",
+      });
+
+      trajListener.subscribe((message: any) => {
+        if (message) {
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "traj",
+              data: simplifyMarkers_tarj(message.markers),
+            });
+          }
+        }
+      });
+
+      // 发布控制话题
       const controlTopic = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: "/rock_can/steer_command",
+        name: "/visulization/traj",
         messageType: "cyber_msgs/steer_cmd",
       });
 

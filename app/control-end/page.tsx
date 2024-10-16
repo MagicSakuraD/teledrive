@@ -18,6 +18,7 @@ import {
 import {} from "@radix-ui/react-select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import Car3D from "./components/Car3D";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -55,6 +56,8 @@ const ControlEnd = () => {
   const [currentGear, setCurrentGear] = useState<string>("N");
   // 用于保存反馈速度的 state
   const [feedbackSpeed, setFeedbackSpeed] = useState<number>(0);
+  const [normalRoad, setNormalRoad] = useState<any>(null);
+  const [trajectory, setTrajectory] = useState<any>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const secondCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -134,6 +137,17 @@ const ControlEnd = () => {
               setFeedbackSpeed(receivedData); // 你可以将接收到的速度信息更新到状态中
               break;
 
+            case "road":
+              // 如果接收到的是道路信息
+              setNormalRoad(receivedData); // 你可以将接收到的道路信息更新到状态中
+              break;
+
+            case "traj":
+              // 如果接收到的是轨迹信息
+              console.log("received trajectory", receivedData);
+              setTrajectory(receivedData); // 你可以将接收到的轨迹信息更新到状态中
+              break;
+
             default:
               console.warn("收到的不是预期的数据格式");
               break;
@@ -186,7 +200,6 @@ const ControlEnd = () => {
 
   useEffect(() => {
     let animationFrameId: number;
-
     const sendControlData = () => {
       if (connRef.current && connRef.current.open) {
         const controlData = {
@@ -258,7 +271,6 @@ const ControlEnd = () => {
         stats.forEach((report) => {
           if (report.type === "candidate-pair") {
             setLatency(report.currentRoundTripTime);
-            // console.log(report.currentRoundTripTime);
           }
         });
       }, 1000); // 每秒更新一次
@@ -274,58 +286,63 @@ const ControlEnd = () => {
   };
 
   return (
-    <div className="w-full xl:w-3/4 min-[2560px]:w-5/6 flex flex-col gap-3 p-3 my-auto">
-      <Card className="overflow-hidden">
-        <div className="relative">
-          <video ref={videoRef} className="w-full h-auto" controls />
-          <Badge
-            variant={"outline"}
-            className="absolute border-none top-0 right-0 flex flex-row gap-1 items-center text-green-600 z-10"
-          >
-            <Wifi className="w-4 h-4" />
-            <p className="text-xs">
-              延迟: <b className="">{`${latency * 1000} ms`}</b>
-            </p>
-          </Badge>
-        </div>
+    <div className="w-full min-[2560px]:w-5/6 flex flex-col gap-3 p-3 my-auto">
+      <div className="flex flex-row gap-2 w-full basis-3/5">
+        <Card className="overflow-hidden grow">
+          <div className="relative">
+            <video ref={videoRef} className="w-full h-auto" controls />
+            <Badge
+              variant={"outline"}
+              className="absolute border-none top-0 right-0 flex flex-row gap-1 items-center text-green-600 z-10"
+            >
+              <Wifi className="w-4 h-4" />
+              <p className="text-xs">
+                延迟: <b className="">{`${latency * 1000} ms`}</b>
+              </p>
+            </Badge>
+          </div>
 
-        <CardFooter className="flex flex-row justify-between py-2 w-full">
-          <div className="flex gap-6 items-center mt-1">
-            <p>
-              控制端ID:
-              <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-                {myPeerId}
-              </code>
-            </p>
-            <ConnectionStatus connected={connected} />
-            {/* 
+          <CardFooter className="flex flex-row justify-between py-2 w-full">
+            <div className="flex gap-6 items-center mt-1">
+              <p>
+                控制端ID:
+                <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+                  {myPeerId}
+                </code>
+              </p>
+              <ConnectionStatus connected={connected} />
+              {/* 
             {!connected && (
               <Button variant="outline" onClick={reconnect}>
                 重新连接
               </Button>
             )} */}
-          </div>
-          <Select onValueChange={switchTopic}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="选择摄像头" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="/driver/fisheye/front/compressed">
-                前置摄像头
-              </SelectItem>
-              <SelectItem value="/driver/fisheye/back/compressed">
-                后置摄像头
-              </SelectItem>
-              <SelectItem value="/driver/fisheye/left/compressed">
-                左侧摄像头
-              </SelectItem>
-              <SelectItem value="/driver/fisheye/right/compressed">
-                右侧摄像头
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </CardFooter>
-      </Card>
+            </div>
+            <Select onValueChange={switchTopic}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="选择摄像头" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="/driver/fisheye/front/compressed">
+                  前置摄像头
+                </SelectItem>
+                <SelectItem value="/driver/fisheye/back/compressed">
+                  后置摄像头
+                </SelectItem>
+                <SelectItem value="/driver/fisheye/left/compressed">
+                  左侧摄像头
+                </SelectItem>
+                <SelectItem value="/driver/fisheye/right/compressed">
+                  右侧摄像头
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </CardFooter>
+        </Card>
+
+        {/* threejs */}
+        <Card className=" basis-2/5">{/* <Car3D /> */}</Card>
+      </div>
 
       <Card className=" backdrop-blur-xl bg-background/30">
         <div className="flex flex-row gap-4 p-2">
