@@ -58,6 +58,7 @@ const ControlEnd = () => {
   const [feedbackSpeed, setFeedbackSpeed] = useState<number>(0);
   const [normalRoad, setNormalRoad] = useState<any>(null);
   const [trajectory, setTrajectory] = useState<any>(null);
+  const [localization, setLocalization] = useState<any>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const secondCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -144,8 +145,12 @@ const ControlEnd = () => {
 
             case "traj":
               // 如果接收到的是轨迹信息
-              console.log("received trajectory", receivedData);
               setTrajectory(receivedData); // 你可以将接收到的轨迹信息更新到状态中
+              break;
+
+            case "localization":
+              // 如果接收到的是定位信息
+              setLocalization(receivedData); // 你可以将接收到的定位信息更新到状态中
               break;
 
             default:

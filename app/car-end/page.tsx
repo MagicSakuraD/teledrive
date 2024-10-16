@@ -299,12 +299,12 @@ const Car = ({ remotePeerId = "control-002" }) => {
       localizationListener.subscribe((message: any) => {
         if (message) {
           console.log("车辆位置", message);
-          // if (connRef.current && connRef.current.open) {
-          //   connRef.current.send({
-          //     topic: "localization",
-          //     data: message,
-          //   });
-          // }
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "localization",
+              data: message,
+            });
+          }
         }
       });
 
