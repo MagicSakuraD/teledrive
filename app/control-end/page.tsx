@@ -346,7 +346,9 @@ const ControlEnd = () => {
         </Card>
 
         {/* threejs */}
-        <Card className=" basis-2/5">{/* <Car3D /> */}</Card>
+        <Card className=" basis-2/5">
+          <Car3D />
+        </Card>
       </div>
 
       <Card className=" backdrop-blur-xl bg-background/30">

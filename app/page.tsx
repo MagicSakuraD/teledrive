@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Car, Gamepad2 } from "lucide-react";
 import Link from "next/link";
+import { GameController, CarProfile } from "@phosphor-icons/react";
 
 export default function Dashboard() {
   return (
@@ -26,9 +27,10 @@ export default function Dashboard() {
           <Link href="/control-end">
             <Label
               htmlFor="paypal"
-              className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+              className="flex flex-col items-center font-semibold justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
             >
-              <Gamepad2 className="mb-3 w-36 h-36" strokeWidth={1.5} />
+              <GameController weight="duotone" className="mb-3 w-36 h-36" />
+              {/* <Gamepad2 className="mb-3 w-36 h-36" strokeWidth={1.5} /> */}
               控制端
             </Label>
           </Link>
@@ -38,9 +40,10 @@ export default function Dashboard() {
           <Link href="/car-end">
             <Label
               htmlFor="apple"
-              className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+              className="flex flex-col items-center font-semibold justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
             >
-              <Car className="mb-3 w-36 h-36" strokeWidth={1.5} />
+              {/* <Car className="mb-3 w-36 h-36" strokeWidth={1.5} /> */}
+              <CarProfile weight="duotone" className="mb-3 w-36 h-36" />
               车端
             </Label>
           </Link>
