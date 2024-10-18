@@ -19,6 +19,7 @@ import {} from "@radix-ui/react-select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Car3D from "./components/Car3D";
+import { carMarker } from "@/lib/simplifyMarkers";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -58,7 +59,7 @@ const ControlEnd = () => {
   const [feedbackSpeed, setFeedbackSpeed] = useState<number>(0);
   const [normalRoad, setNormalRoad] = useState<any>(null);
   const [trajectory, setTrajectory] = useState<any>(null);
-  const [localization, setLocalization] = useState<any>(null);
+  const [localization, setLocalization] = useState<carMarker | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const secondCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -185,7 +186,7 @@ const ControlEnd = () => {
         peer.destroy();
       }
     };
-  }, []);
+  }, [connected]);
 
   useEffect(() => {
     let animationFrameId: number;
@@ -347,7 +348,7 @@ const ControlEnd = () => {
 
         {/* threejs */}
         <Card className=" basis-2/5">
-          <Car3D />
+          {localization && <Car3D {...localization} />}
         </Card>
       </div>
 

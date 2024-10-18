@@ -25,91 +25,73 @@ type GLTFResult = GLTF & {
   };
 };
 
-export function Model(props: JSX.IntrinsicElements["group"]) {
+export function ModelCar(props: JSX.IntrinsicElements["group"]) {
   const { nodes, materials } = useGLTF("/car2.glb") as GLTFResult;
   return (
     <group {...props} dispose={null}>
-      <group name="Scene">
-        <group
-          name="Coupe_Body"
-          position={[-6.091, 0, 1.977]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          scale={0.001}
-        >
-          <mesh
-            name="Coupe_Body_Body_0"
-            castShadow
-            receiveShadow
-            geometry={nodes.Coupe_Body_Body_0.geometry}
-            material={materials.Body_0}
-            position={[0, 0, 0]}
-          />
-          <mesh
-            name="Coupe_Body_Glass_0"
-            castShadow
-            receiveShadow
-            geometry={nodes.Coupe_Body_Glass_0.geometry}
-            material={materials.Glass_0}
-            position={[0, 0, 0]}
-          />
-          <mesh
-            name="Coupe_Body_Optics_0"
-            castShadow
-            receiveShadow
-            geometry={nodes.Coupe_Body_Optics_0.geometry}
-            material={materials.Optics_0}
-            position={[0, 0, 0]}
-          />
-        </group>
+      <group
+        position={[-6.091, 0, 1.977]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        scale={0.001}
+      >
         <mesh
-          name="Wheel_F_Wheel_0"
           castShadow
           receiveShadow
-          geometry={nodes.Wheel_F_Wheel_0.geometry}
-          material={materials.Wheel_0}
-          position={[-5.144, 0.298, 0.98]}
-          rotation={[-Math.PI / 2, 0, 1.879]}
-          scale={0.001}
+          geometry={nodes.Coupe_Body_Body_0.geometry}
+          material={materials.Body_0}
+          position={[0, 0, 0]}
         />
-        <group
-          name="Wheel_F001"
-          position={[-7.443, 0.298, 1.712]}
-          rotation={[-Math.PI / 2, 0, 1.879]}
-          scale={0.001}
-        >
-          <mesh
-            name="Wheel_F001_Wheel_0"
-            castShadow
-            receiveShadow
-            geometry={nodes.Wheel_F001_Wheel_0.geometry}
-            material={materials.Wheel_0}
-          />
-        </group>
-        <group
-          name="Wheel_F002"
-          position={[-4.742, 0.298, 2.243]}
-          rotation={[-Math.PI / 2, 0, 1.879]}
-          scale={0.001}
-        >
-          <mesh
-            name="Wheel_F002_Wheel_0"
-            castShadow
-            receiveShadow
-            geometry={nodes.Wheel_F002_Wheel_0.geometry}
-            material={materials.Wheel_0}
-          />
-        </group>
         <mesh
-          name="Wheel_F003_Wheel_0"
           castShadow
           receiveShadow
-          geometry={nodes.Wheel_F003_Wheel_0.geometry}
-          material={materials.Wheel_0}
-          position={[-7.041, 0.298, 2.975]}
-          rotation={[-Math.PI / 2, 0, 1.879]}
-          scale={0.001}
+          geometry={nodes.Coupe_Body_Glass_0.geometry}
+          material={materials.Glass_0}
+          position={[0, 0, 0]}
+        />
+        <mesh
+          castShadow
+          receiveShadow
+          geometry={nodes.Coupe_Body_Optics_0.geometry}
+          material={materials.Optics_0}
+          position={[0, 0, 0]}
         />
       </group>
+      <mesh
+        castShadow
+        receiveShadow
+        geometry={nodes.Wheel_F_Wheel_0.geometry}
+        material={materials.Wheel_0}
+        position={[-5.144, 0.298, 0.98]}
+        rotation={[-Math.PI / 2, 0, 1.879]}
+        scale={0.001}
+      />
+      <mesh
+        castShadow
+        receiveShadow
+        geometry={nodes.Wheel_F003_Wheel_0.geometry}
+        material={materials.Wheel_0}
+        position={[-7.041, 0.298, 2.975]}
+        rotation={[-Math.PI / 2, 0, 1.879]}
+        scale={0.001}
+      />
+      <mesh
+        castShadow
+        receiveShadow
+        geometry={nodes.Wheel_F001_Wheel_0.geometry}
+        material={materials.Wheel_0}
+        position={[-7.443, 0.298, 1.712]}
+        rotation={[-Math.PI / 2, 0, 1.879]}
+        scale={0.001}
+      />
+      <mesh
+        castShadow
+        receiveShadow
+        geometry={nodes.Wheel_F002_Wheel_0.geometry}
+        material={materials.Wheel_0}
+        position={[-4.742, 0.298, 2.243]}
+        rotation={[-Math.PI / 2, 0, 1.879]}
+        scale={0.001}
+      />
     </group>
   );
 }

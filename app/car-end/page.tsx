@@ -5,7 +5,10 @@ import ROSLIB from "roslib";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import drawGuideLine from "@/lib/drawGuideLine";
 import { set } from "zod";
-import { simplifyMarkers_tarj } from "@/lib/simplifyMarkers";
+import {
+  simplifyMarkers_tarj,
+  simplifyMarker_loc,
+} from "@/lib/simplifyMarkers";
 
 const Car = ({ remotePeerId = "control-002" }) => {
   const [peerId, setPeerId] = useState<string | null>(null);
@@ -281,10 +284,10 @@ const Car = ({ remotePeerId = "control-002" }) => {
         if (message) {
           // console.log("道路", message.markers);
           if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "road",
-              data: message.markers,
-            });
+            // connRef.current.send({
+            //   topic: "road",
+            //   data: message.markers,
+            // });
           }
         }
       });
@@ -298,11 +301,10 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
       localizationListener.subscribe((message: any) => {
         if (message) {
-          console.log("车辆位置", message);
           if (connRef.current && connRef.current.open) {
             connRef.current.send({
               topic: "localization",
-              data: message,
+              data: simplifyMarker_loc(message),
             });
           }
         }

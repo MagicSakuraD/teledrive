@@ -38,3 +38,15 @@ export function simplifyMarkers_tarj(markers: Marker[]) {
     lifetime: marker.lifetime.secs + marker.lifetime.nsecs / 1e9, // Convert lifetime to seconds
   }));
 }
+
+export type carMarker = {
+  position: { x: number; y: number; z: number };
+  orientation: { x: number; y: number; z: number; w: number };
+};
+
+export function simplifyMarker_loc(message: any): carMarker {
+  return {
+    position: message.pose.position,
+    orientation: message.pose.orientation,
+  };
+}
