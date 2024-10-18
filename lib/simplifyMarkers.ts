@@ -1,5 +1,5 @@
-interface Marker {
-  id: string;
+export interface Marker {
+  id?: string;
   pose: {
     position: {
       x: number;
@@ -7,17 +7,15 @@ interface Marker {
       z: number;
     };
   };
-  color: {
-    r: number;
-    g: number;
-    b: number;
-    a: number;
-  };
 
-  lifetime: {
+  lifetime?: {
     secs: number;
     nsecs: number;
   };
+
+  type?: number;
+
+  scale?: { x: number; y: number; z: number };
 }
 
 export function simplifyMarkers_tarj(markers: Marker[]) {
@@ -25,17 +23,11 @@ export function simplifyMarkers_tarj(markers: Marker[]) {
     id: marker.id,
     position: {
       x: marker.pose.position.x,
-      y: marker.pose.position.y,
-      z: marker.pose.position.z,
-    },
-    color: {
-      r: marker.color.r,
-      g: marker.color.g,
-      b: marker.color.b,
-      a: marker.color.a,
+      y: marker.pose.position.z,
+      z: marker.pose.position.y,
     },
 
-    lifetime: marker.lifetime.secs + marker.lifetime.nsecs / 1e9, // Convert lifetime to seconds
+    lifetime: marker.lifetime!.secs + marker.lifetime!.nsecs / 1e9, // Convert lifetime to seconds
   }));
 }
 
@@ -46,7 +38,36 @@ export type carMarker = {
 
 export function simplifyMarker_loc(message: any): carMarker {
   return {
-    position: message.pose.position,
-    orientation: message.pose.orientation,
+    position: {
+      x: message.pose.position.x,
+      y: message.pose.position.z, // Swap y and z
+      z: message.pose.position.y, // Swap y and z
+    },
+    orientation: {
+      x: message.pose.orientation.x,
+      y: message.pose.orientation.z, // Swap y and z
+      z: message.pose.orientation.y, // Swap y and z
+      w: message.pose.orientation.w,
+    },
   };
+}
+
+export function simplifyMarkers_obs(markers: any[]): Marker[] {
+  return markers.map((marker) => {
+    switch (marker.type) {
+      case 9:
+        return {
+          type: marker.type,
+          position: {
+            x: marker.pose.position.x,
+            y: marker.pose.position.y, // Swap y and z
+            z: marker.pose.position.z, // Swap y and z
+          },
+          scale: marker.scale,
+        };
+
+      default:
+        return marker; // 对于其他类型，返回原始对象
+    }
+  });
 }

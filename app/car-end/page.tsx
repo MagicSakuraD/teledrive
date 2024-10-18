@@ -8,6 +8,7 @@ import { set } from "zod";
 import {
   simplifyMarkers_tarj,
   simplifyMarker_loc,
+  simplifyMarkers_obs,
 } from "@/lib/simplifyMarkers";
 
 const Car = ({ remotePeerId = "control-002" }) => {
@@ -305,6 +306,25 @@ const Car = ({ remotePeerId = "control-002" }) => {
             connRef.current.send({
               topic: "localization",
               data: simplifyMarker_loc(message),
+            });
+          }
+        }
+      });
+
+      //订阅障碍物话题/visualization/obstacles
+      const obstaclesListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/visualization/obstacles",
+        messageType: "visualization_msgs/MarkerArray",
+      });
+
+      obstaclesListener.subscribe((message: any) => {
+        if (message) {
+          // console.log("障碍物", message.markers);
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "obstacles",
+              data: simplifyMarkers_obs(message.markers),
             });
           }
         }

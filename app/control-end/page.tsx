@@ -60,6 +60,7 @@ const ControlEnd = () => {
   const [normalRoad, setNormalRoad] = useState<any>(null);
   const [trajectory, setTrajectory] = useState<any>(null);
   const [localization, setLocalization] = useState<carMarker | null>(null);
+  const [obstacles, setObstacles] = useState<any>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const secondCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -154,8 +155,14 @@ const ControlEnd = () => {
               setLocalization(receivedData); // 你可以将接收到的定位信息更新到状态中
               break;
 
+            case "obstacles":
+              // 如果接收到的是障碍物信息
+              setObstacles(receivedData); // 你可以将接收到的障碍物信息更新到状态中
+              break;
+
             default:
-              console.warn("收到的不是预期的数据格式");
+              // console.warn("收到的不是预期的数据格式");
+              console.log("未知话题:", topic);
               break;
           }
         } else {
@@ -348,7 +355,13 @@ const ControlEnd = () => {
 
         {/* threejs */}
         <Card className=" basis-2/5">
-          {localization && <Car3D {...localization} />}
+          {localization && (
+            <Car3D
+              localization={localization}
+              obstacles={obstacles}
+              trajectory={trajectory}
+            />
+          )}
         </Card>
       </div>
 
