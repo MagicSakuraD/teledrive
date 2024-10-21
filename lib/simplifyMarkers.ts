@@ -6,6 +6,7 @@ export interface Marker {
       y: number;
       z: number;
     };
+    orientation: { x: number; y: number; z: number; w: number };
   };
 
   lifetime?: {
@@ -22,8 +23,8 @@ export function simplifyMarkers_tarj(markers: Marker[]) {
   return markers.map((marker) => ({
     id: marker.id,
     position: {
-      x: marker.pose.position.x,
-      y: marker.pose.position.z,
+      x: -marker.pose.position.x,
+      y: marker.pose.position.z, // Swap y and z
       z: marker.pose.position.y,
     },
 
@@ -39,7 +40,7 @@ export type carMarker = {
 export function simplifyMarker_loc(message: any): carMarker {
   return {
     position: {
-      x: message.pose.position.x,
+      x: -message.pose.position.x,
       y: message.pose.position.z, // Swap y and z
       z: message.pose.position.y, // Swap y and z
     },
@@ -59,9 +60,15 @@ export function simplifyMarkers_obs(markers: any[]): Marker[] {
         return {
           type: marker.type,
           position: {
-            x: marker.pose.position.x,
-            y: marker.pose.position.y, // Swap y and z
-            z: marker.pose.position.z, // Swap y and z
+            x: -marker.pose.position.x,
+            y: marker.pose.position.z, // Swap y and z
+            z: marker.pose.position.y, // Swap y and z
+          },
+          orientation: {
+            x: -marker.pose.orientation.x,
+            y: marker.pose.orientation.z, // Swap y and z
+            z: marker.pose.orientation.y, // Swap y and z
+            w: marker.pose.orientation.w,
           },
           scale: marker.scale,
         };

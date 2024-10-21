@@ -1,13 +1,10 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { useMemo, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { OrbitControls, PositionMesh } from "@react-three/drei";
-import { Model } from "./models/Model";
-import { Line } from "@react-three/drei";
+import { OrbitControls, PerspectiveCamera, Line } from "@react-three/drei";
 import { ModelSuv } from "./models/suv";
-import { ModelCar } from "./models/car";
-import { carMarker, Marker } from "@/lib/simplifyMarkers";
+import { carMarker } from "@/lib/simplifyMarkers";
 
 type obstacleType = {
   type: number;
@@ -16,6 +13,7 @@ type obstacleType = {
     y: number;
     z: number;
   };
+  orientation: { x: number; y: number; z: number; w: number };
   scale: { x: number; y: number; z: number };
 };
 
@@ -34,94 +32,113 @@ interface Car3DProps {
   trajectory: trajType[];
 }
 
-const TrajectoryLine = ({ trajectory }: { trajectory: trajType[] }) => {
-  const points = useMemo(() => {
-    // Provide a default empty array in case trajectory is null or undefined
-    return (trajectory || []).map(
-      (marker) =>
-        new THREE.Vector3(
-          marker.position.x,
-          marker.position.y,
-          marker.position.z
-        )
+const TrajectoryLine = React.memo(
+  ({
+    trajectory,
+    localization,
+  }: {
+    trajectory: trajType[];
+    localization: carMarker;
+  }) => {
+    const points = useMemo(() => {
+      return trajectory.map(
+        (marker) =>
+          new THREE.Vector3(
+            marker.position.x - localization.position.x,
+            marker.position.y - localization.position.y,
+            marker.position.z - localization.position.z
+          )
+      );
+    }, [trajectory, localization.position]);
+
+    const colors = useMemo(() => {
+      const startColor = new THREE.Color("#22c55e");
+      const numPoints = trajectory.length;
+      const colorArray = [];
+      for (let i = 0; i < numPoints; i++) {
+        const t = i / (numPoints - 1);
+        colorArray.push([startColor.r, startColor.g, startColor.b, 1 - t] as [
+          number,
+          number,
+          number,
+          number
+        ]);
+      }
+      return colorArray;
+    }, [trajectory.length]);
+
+    return (
+      <Line
+        points={points}
+        color="#22c55e"
+        lineWidth={20}
+        vertexColors={colors}
+        transparent
+      />
     );
-  }, [trajectory]);
+  }
+);
 
-  const colors = useMemo(() => {
-    const startColor = new THREE.Color("#22c55e"); // Solid blue color
-    const colorArray: Array<[number, number, number, number]> = []; // Array of color tuples
-    const numPoints = trajectory.length;
-
-    for (let i = 0; i < numPoints; i++) {
-      const t = i / (numPoints - 1); // Interpolation value between 0 and 1
-      const interpolatedColor = startColor.clone();
-      colorArray.push([
-        interpolatedColor.r,
-        interpolatedColor.g,
-        interpolatedColor.b,
-        1 - t, // Fade to transparent
-      ]);
-    }
-    return colorArray; // Return an array of [r, g, b, a] tuples
-  }, [trajectory]);
-
-  return (
-    <Line
-      points={points}
-      color="#22c55e" // Base color
-      lineWidth={20} // Thicker line
-      vertexColors={colors} // Gradient color array as tuples
-    />
-  );
-};
+TrajectoryLine.displayName = "TrajectoryLine";
 
 const Car3D: React.FC<Car3DProps> = ({
   localization,
   obstacles,
   trajectory,
 }) => {
-  // Ensure obstacles is an array before mapping
   const car_obstacles: obstacleType[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: obstacleType) => obstacle.type === 9)
     : [];
 
   return (
     <Canvas>
-      <OrbitControls />
-      {/* 环境光 */}
+      <PerspectiveCamera makeDefault position={[12, 20, -6]} />
+      <OrbitControls target={[0, 0, 0]} />
+
       <ambientLight intensity={0.5} />
-      {/* 平行光 */}
       <directionalLight color="#f8fafc" position={[5, 60, 7]} intensity={1} />
+
+      {/* 车辆固定在原点 */}
       <ModelSuv
-        position={[
-          localization.position.x,
-          localization.position.y,
-          localization.position.z,
-        ]}
+        position={[0, 0, 0]} // 车辆位置为原点
         quaternion={[
           localization.orientation.x,
-          localization.orientation.y,
+          -localization.orientation.y,
           localization.orientation.z,
           localization.orientation.w,
         ]}
         scale={[1, 1, 1]}
       />
+
+      {/* 障碍物相对于车辆的相对位置 */}
       {car_obstacles.map(
         (obstacle: obstacleType, index: number) =>
           obstacle && (
             <ModelSuv
               key={index}
-              position={[obstacle.position.x, 0, obstacle.position.y]}
-              quaternion={[0, 0, 0, 0]}
+              position={[
+                obstacle.position.x - localization.position.x,
+                obstacle.position.y - localization.position.y,
+                obstacle.position.z - localization.position.z,
+              ]}
+              quaternion={[
+                obstacle.orientation.x,
+                obstacle.orientation.y,
+                obstacle.orientation.z,
+                obstacle.orientation.w,
+              ]}
               scale={[1, 1, 1]}
             />
           )
       )}
 
-      <TrajectoryLine trajectory={trajectory} />
+      {/* 显示轨迹，轨迹点也减去车辆位置 */}
+      {trajectory && trajectory.length > 0 && (
+        <TrajectoryLine trajectory={trajectory} localization={localization} />
+      )}
 
-      <gridHelper args={[1000, 20]} />
-      <axesHelper args={[200]} />
+      {/* <gridHelper args={[60, 6]} /> */}
+      {/* <axesHelper args={[200]} /> */}
     </Canvas>
   );
 };

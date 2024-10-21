@@ -152,11 +152,13 @@ const ControlEnd = () => {
 
             case "localization":
               // 如果接收到的是定位信息
+              // console.log("定位信息", receivedData);
               setLocalization(receivedData); // 你可以将接收到的定位信息更新到状态中
               break;
 
             case "obstacles":
               // 如果接收到的是障碍物信息
+              // console.log("障碍物信息", receivedData);
               setObstacles(receivedData); // 你可以将接收到的障碍物信息更新到状态中
               break;
 
