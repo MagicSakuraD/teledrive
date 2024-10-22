@@ -92,7 +92,7 @@ const Car3D: React.FC<Car3DProps> = ({
 
   return (
     <Canvas>
-      <PerspectiveCamera makeDefault position={[12, 20, -6]} />
+      <PerspectiveCamera makeDefault position={[10, 20, -6]} />
       <OrbitControls target={[0, 0, 0]} />
 
       <ambientLight intensity={0.5} />
@@ -101,11 +101,15 @@ const Car3D: React.FC<Car3DProps> = ({
       {/* 车辆固定在原点 */}
       <ModelSuv
         position={[0, 0, 0]} // 车辆位置为原点
-        quaternion={[
-          localization.orientation.x,
-          -localization.orientation.y,
-          localization.orientation.z,
-          localization.orientation.w,
+        rotation={[
+          0,
+          Math.asin(
+            2 *
+              (localization.orientation.w * localization.orientation.y -
+                localization.orientation.z * localization.orientation.x)
+          ) -
+            Math.PI / 2,
+          0,
         ]}
         scale={[1, 1, 1]}
       />
