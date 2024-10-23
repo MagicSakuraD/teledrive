@@ -41,9 +41,6 @@ const PathBoundary = ({ boundary, localization }: PathBoundaryProps) => {
       }
     });
 
-    console.log("Left points count:", left.length);
-    console.log("Right points count:", right.length);
-
     return {
       leftPoints: left,
       rightPoints: right,

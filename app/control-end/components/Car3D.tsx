@@ -14,6 +14,7 @@ import {
   HueSaturation,
   BrightnessContrast,
 } from "@react-three/postprocessing";
+import FollowCamera from "./models/FollowCamera";
 
 type obstacleType = {
   type: number;
@@ -71,9 +72,9 @@ const Car3D: React.FC<Car3DProps> = ({
 
   return (
     <Canvas>
-      <PerspectiveCamera makeDefault position={[10, 20, -6]} />
-      <OrbitControls target={[0, 0, 0]} />
-
+      {/* <PerspectiveCamera makeDefault position={[10, 20, -6]} />
+      <OrbitControls target={[0, 0, 0]} /> */}
+      <FollowCamera quaternion={finalQuaternion} />
       <ambientLight intensity={0.5} />
       <directionalLight color="#eff6ff" position={[5, 60, 7]} intensity={1.5} />
       <EffectComposer>
