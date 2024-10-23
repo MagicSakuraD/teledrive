@@ -9,6 +9,7 @@ import {
   simplifyMarkers_tarj,
   simplifyMarker_loc,
   simplifyMarkers_obs,
+  simplifyMarkers_boundary,
 } from "@/lib/simplifyMarkers";
 
 const Car = ({ remotePeerId = "control-002" }) => {
@@ -357,7 +358,6 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
       referenceCentralLinesListener.subscribe((message: any) => {
         if (message) {
-         
           if (connRef.current && connRef.current.open) {
             connRef.current.send({
               topic: "CentralLines",
@@ -372,6 +372,17 @@ const Car = ({ remotePeerId = "control-002" }) => {
         ros: rosRef.current,
         name: "/visulization/path_boundary",
         messageType: "visualization_msgs/MarkerArray",
+      });
+
+      pathBoundaryListener.subscribe((message: any) => {
+        if (message) {
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "path_boundary",
+              data: simplifyMarkers_boundary(message.markers),
+            });
+          }
+        }
       });
 
       // 发布控制话题

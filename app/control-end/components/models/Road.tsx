@@ -33,15 +33,15 @@ const Road: React.FC<RoadProps> = ({ centralLines, roadWidth }) => {
     <>
       {/* 道路表面 */}
       <Extrude args={[roadShape, extrudeSettings]}>
-        <meshStandardMaterial color="gray" side={THREE.DoubleSide} />
+        <meshStandardMaterial color="#d6d3d1" side={THREE.DoubleSide} />
       </Extrude>
 
       {/* 道路中心线 */}
-      <Line
+      {/* <Line
         points={centralLines.map((point) => [point.x, point.y, point.z])}
         color="white"
         lineWidth={2}
-      />
+      /> */}
     </>
   );
 };
@@ -51,7 +51,7 @@ const RoadScene = ({
 }: {
   centralLines: { x: number; y: number; z: number }[];
 }) => {
-  return <Road centralLines={centralLines} roadWidth={5} />;
+  return <Road centralLines={centralLines} roadWidth={8} />;
 };
 
 export default RoadScene;

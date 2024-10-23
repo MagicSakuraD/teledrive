@@ -61,6 +61,7 @@ const ControlEnd = () => {
   const [trajectory, setTrajectory] = useState<any>(null);
   const [localization, setLocalization] = useState<pointMarker | null>(null);
   const [centralLines, setCentralLines] = useState<any>(null);
+  const [boundary, setBoundary] = useState<any>(null);
 
   const [obstacles, setObstacles] = useState<any>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -160,7 +161,7 @@ const ControlEnd = () => {
 
             case "CentralLines":
               // 如果接收到的是中心线信息
-            
+
               setCentralLines(receivedData); // 你可以将接收到的中心线信息更新到状态中
               break;
 
@@ -170,8 +171,15 @@ const ControlEnd = () => {
               setObstacles(receivedData); // 你可以将接收到的障碍物信息更新到状态中
               break;
 
+            case "path_boundary":
+              // 如果接收到的是路径边界信息
+              // console.log("路径边界信息", receivedData);
+              setBoundary(receivedData); // 你可以将接收到的路径边界信息更新到状态中
+              break;
+
             default:
               // console.warn("收到的不是预期的数据格式");
+
               console.log("未知话题:", topic);
               break;
           }
@@ -371,6 +379,7 @@ const ControlEnd = () => {
               obstacles={obstacles}
               trajectory={trajectory}
               centralLines={centralLines}
+              boundary={boundary}
             />
           )}
         </Card>

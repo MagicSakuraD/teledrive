@@ -12,6 +12,8 @@ export interface Marker {
   type?: number;
 
   scale?: { x: number; y: number; z: number };
+
+  color?: { r: number; g: number; b: number; a: number };
 }
 
 export function simplifyMarkers_tarj(markers: Marker[]) {
@@ -21,6 +23,23 @@ export function simplifyMarkers_tarj(markers: Marker[]) {
       x: -marker.pose.position.x,
       y: marker.pose.position.z, // Swap y and z
       z: marker.pose.position.y,
+    },
+  }));
+}
+
+export function simplifyMarkers_boundary(markers: Marker[]) {
+  return markers.map((marker) => ({
+    id: marker.id,
+    position: {
+      x: -marker.pose.position.x,
+      y: marker.pose.position.z, // Swap y and z
+      z: marker.pose.position.y,
+    },
+    color: {
+      r: marker.color!.r,
+      g: marker.color!.g,
+      b: marker.color!.b,
+      a: marker.color!.a,
     },
   }));
 }

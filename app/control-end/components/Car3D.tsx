@@ -5,7 +5,15 @@ import * as THREE from "three";
 import { OrbitControls, PerspectiveCamera, Line } from "@react-three/drei";
 import { ModelSuv } from "./models/suv";
 import { pointMarker } from "@/lib/simplifyMarkers";
-import RoadScene from "./Road";
+import RoadScene from "./models/Road";
+import computeFinalQuaternion from "./utils3D/computeFinalQuaternion";
+import TrajectoryLine from "./models/Trajectory"; // 导入 TrajectoryLine
+import PathBoundary from "./models/PathBoundary"; // 导入 PathBoundary
+import {
+  EffectComposer,
+  HueSaturation,
+  BrightnessContrast,
+} from "@react-three/postprocessing";
 
 type obstacleType = {
   type: number;
@@ -18,20 +26,14 @@ type obstacleType = {
   scale: { x: number; y: number; z: number };
 };
 
-type trajType = {
+export type trajType = {
   id: string;
   position: {
     x: number;
     y: number;
     z: number;
   };
-};
-
-type orientationType = {
-  x: number;
-  y: number;
-  z: number;
-  w: number;
+  color?: { r: number; g: number; b: number; a: number };
 };
 
 interface Car3DProps {
@@ -39,86 +41,22 @@ interface Car3DProps {
   obstacles: obstacleType[];
   trajectory: trajType[];
   centralLines: trajType[];
+  boundary: trajType[];
 }
-
-const TrajectoryLine = React.memo(
-  ({
-    trajectory,
-    localization,
-  }: {
-    trajectory: trajType[];
-    localization: pointMarker;
-  }) => {
-    const points = useMemo(() => {
-      return trajectory.map(
-        (marker) =>
-          new THREE.Vector3(
-            marker.position.x - localization.position.x,
-            marker.position.y - localization.position.y,
-            marker.position.z - localization.position.z
-          )
-      );
-    }, [trajectory, localization.position]);
-
-    const colors = useMemo(() => {
-      const startColor = new THREE.Color("#22c55e");
-      const numPoints = trajectory.length;
-      const colorArray = [];
-      for (let i = 0; i < numPoints; i++) {
-        const t = i / (numPoints - 1);
-        colorArray.push([startColor.r, startColor.g, startColor.b, 1 - t] as [
-          number,
-          number,
-          number,
-          number
-        ]);
-      }
-      return colorArray;
-    }, [trajectory.length]);
-
-    return (
-      <Line
-        points={points}
-        // color="#22c55e"
-        lineWidth={20}
-        vertexColors={colors}
-        transparent
-      />
-    );
-  }
-);
-
-TrajectoryLine.displayName = "TrajectoryLine";
-
-const computeFinalQuaternion = (localization: orientationType) => {
-  const baseQuaternion = new THREE.Quaternion(
-    localization.x,
-    localization.y,
-    localization.z,
-    localization.w
-  );
-
-  const additionalRotation = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(0, 1, 0),
-    -Math.PI / 2
-  );
-
-  return baseQuaternion.multiply(additionalRotation);
-};
 
 const Car3D: React.FC<Car3DProps> = ({
   localization,
   obstacles,
   trajectory,
   centralLines,
+  boundary,
 }) => {
   const car_obstacles: obstacleType[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: obstacleType) => obstacle.type === 9)
     : [];
 
   const finalQuaternion = computeFinalQuaternion(localization.orientation);
-  console.log(centralLines, "😯");
-  console.log(localization, "🤔");
+
   //中心线减去车辆位置
   const Rodeline = centralLines
     ? centralLines.map(
@@ -137,7 +75,12 @@ const Car3D: React.FC<Car3DProps> = ({
       <OrbitControls target={[0, 0, 0]} />
 
       <ambientLight intensity={0.5} />
-      <directionalLight color="#f8fafc" position={[5, 60, 7]} intensity={1} />
+      <directionalLight color="#eff6ff" position={[5, 60, 7]} intensity={1.5} />
+      <EffectComposer>
+        {/* <Bloom intensity={1.2} luminanceThreshold={0.3} /> */}
+        <BrightnessContrast brightness={0.05} contrast={0.2} />
+        <HueSaturation hue={0.0} saturation={0.3} />
+      </EffectComposer>
 
       <ModelSuv
         position={[0, 0, 0]} // 车辆位置为原点
@@ -152,7 +95,7 @@ const Car3D: React.FC<Car3DProps> = ({
               key={index}
               position={[
                 obstacle.position.x - localization.position.x,
-                obstacle.position.y - localization.position.y,
+                obstacle.position.y - localization.position.y - 2,
                 obstacle.position.z - localization.position.z,
               ]}
               quaternion={computeFinalQuaternion(obstacle.orientation)}
@@ -161,7 +104,12 @@ const Car3D: React.FC<Car3DProps> = ({
           )
       )}
 
-      {/* {centralLines && <RoadScene centralLines={Rodeline} />} */}
+      {/* 使用 PathBoundary 组件 */}
+      {boundary && (
+        <PathBoundary boundary={boundary} localization={localization} />
+      )}
+
+      {centralLines && <RoadScene centralLines={Rodeline} />}
 
       {/* 显示轨迹，轨迹点也减去车辆位置 */}
       {trajectory && trajectory.length > 0 && (
