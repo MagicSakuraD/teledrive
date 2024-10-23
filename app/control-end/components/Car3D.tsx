@@ -4,7 +4,8 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { OrbitControls, PerspectiveCamera, Line } from "@react-three/drei";
 import { ModelSuv } from "./models/suv";
-import { carMarker } from "@/lib/simplifyMarkers";
+import { pointMarker } from "@/lib/simplifyMarkers";
+import RoadScene from "./Road";
 
 type obstacleType = {
   type: number;
@@ -26,10 +27,18 @@ type trajType = {
   };
 };
 
+type orientationType = {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+};
+
 interface Car3DProps {
-  localization: carMarker;
+  localization: pointMarker;
   obstacles: obstacleType[];
   trajectory: trajType[];
+  centralLines: trajType[];
 }
 
 const TrajectoryLine = React.memo(
@@ -38,7 +47,7 @@ const TrajectoryLine = React.memo(
     localization,
   }: {
     trajectory: trajType[];
-    localization: carMarker;
+    localization: pointMarker;
   }) => {
     const points = useMemo(() => {
       return trajectory.map(
@@ -70,7 +79,7 @@ const TrajectoryLine = React.memo(
     return (
       <Line
         points={points}
-        color="#22c55e"
+        // color="#22c55e"
         lineWidth={20}
         vertexColors={colors}
         transparent
@@ -81,13 +90,45 @@ const TrajectoryLine = React.memo(
 
 TrajectoryLine.displayName = "TrajectoryLine";
 
+const computeFinalQuaternion = (localization: orientationType) => {
+  const baseQuaternion = new THREE.Quaternion(
+    localization.x,
+    localization.y,
+    localization.z,
+    localization.w
+  );
+
+  const additionalRotation = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 1, 0),
+    -Math.PI / 2
+  );
+
+  return baseQuaternion.multiply(additionalRotation);
+};
+
 const Car3D: React.FC<Car3DProps> = ({
   localization,
   obstacles,
   trajectory,
+  centralLines,
 }) => {
   const car_obstacles: obstacleType[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: obstacleType) => obstacle.type === 9)
+    : [];
+
+  const finalQuaternion = computeFinalQuaternion(localization.orientation);
+  console.log(centralLines, "😯");
+  console.log(localization, "🤔");
+  //中心线减去车辆位置
+  const Rodeline = centralLines
+    ? centralLines.map(
+        (p) =>
+          new THREE.Vector3(
+            p.position.x - localization.position.x,
+            p.position.y - localization.position.y,
+            p.position.z - localization.position.z
+          )
+      )
     : [];
 
   return (
@@ -98,23 +139,12 @@ const Car3D: React.FC<Car3DProps> = ({
       <ambientLight intensity={0.5} />
       <directionalLight color="#f8fafc" position={[5, 60, 7]} intensity={1} />
 
-      {/* 车辆固定在原点 */}
       <ModelSuv
         position={[0, 0, 0]} // 车辆位置为原点
-        rotation={[
-          0,
-          Math.asin(
-            2 *
-              (localization.orientation.w * localization.orientation.y -
-                localization.orientation.z * localization.orientation.x)
-          ) -
-            Math.PI / 2,
-          0,
-        ]}
+        quaternion={finalQuaternion}
         scale={[1, 1, 1]}
       />
 
-      {/* 障碍物相对于车辆的相对位置 */}
       {car_obstacles.map(
         (obstacle: obstacleType, index: number) =>
           obstacle && (
@@ -125,16 +155,13 @@ const Car3D: React.FC<Car3DProps> = ({
                 obstacle.position.y - localization.position.y,
                 obstacle.position.z - localization.position.z,
               ]}
-              quaternion={[
-                obstacle.orientation.x,
-                obstacle.orientation.y,
-                obstacle.orientation.z,
-                obstacle.orientation.w,
-              ]}
+              quaternion={computeFinalQuaternion(obstacle.orientation)}
               scale={[1, 1, 1]}
             />
           )
       )}
+
+      {/* {centralLines && <RoadScene centralLines={Rodeline} />} */}
 
       {/* 显示轨迹，轨迹点也减去车辆位置 */}
       {trajectory && trajectory.length > 0 && (

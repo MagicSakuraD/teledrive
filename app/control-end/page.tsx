@@ -19,7 +19,7 @@ import {} from "@radix-ui/react-select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Car3D from "./components/Car3D";
-import { carMarker } from "@/lib/simplifyMarkers";
+import { pointMarker } from "@/lib/simplifyMarkers";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -59,7 +59,9 @@ const ControlEnd = () => {
   const [feedbackSpeed, setFeedbackSpeed] = useState<number>(0);
   const [normalRoad, setNormalRoad] = useState<any>(null);
   const [trajectory, setTrajectory] = useState<any>(null);
-  const [localization, setLocalization] = useState<carMarker | null>(null);
+  const [localization, setLocalization] = useState<pointMarker | null>(null);
+  const [centralLines, setCentralLines] = useState<any>(null);
+
   const [obstacles, setObstacles] = useState<any>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const secondCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -152,8 +154,14 @@ const ControlEnd = () => {
 
             case "localization":
               // 如果接收到的是定位信息
-              console.log("定位信息", receivedData);
+              // console.log("定位信息", receivedData);
               setLocalization(receivedData); // 你可以将接收到的定位信息更新到状态中
+              break;
+
+            case "CentralLines":
+              // 如果接收到的是中心线信息
+            
+              setCentralLines(receivedData); // 你可以将接收到的中心线信息更新到状态中
               break;
 
             case "obstacles":
@@ -362,6 +370,7 @@ const ControlEnd = () => {
               localization={localization}
               obstacles={obstacles}
               trajectory={trajectory}
+              centralLines={centralLines}
             />
           )}
         </Card>

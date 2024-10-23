@@ -9,11 +9,6 @@ export interface Marker {
     orientation: { x: number; y: number; z: number; w: number };
   };
 
-  lifetime?: {
-    secs: number;
-    nsecs: number;
-  };
-
   type?: number;
 
   scale?: { x: number; y: number; z: number };
@@ -27,17 +22,15 @@ export function simplifyMarkers_tarj(markers: Marker[]) {
       y: marker.pose.position.z, // Swap y and z
       z: marker.pose.position.y,
     },
-
-    lifetime: marker.lifetime!.secs + marker.lifetime!.nsecs / 1e9, // Convert lifetime to seconds
   }));
 }
 
-export type carMarker = {
+export type pointMarker = {
   position: { x: number; y: number; z: number };
   orientation: { x: number; y: number; z: number; w: number };
 };
 
-export function simplifyMarker_loc(message: any): carMarker {
+export function simplifyMarker_loc(message: any): pointMarker {
   return {
     position: {
       x: -message.pose.position.x,
@@ -65,7 +58,7 @@ export function simplifyMarkers_obs(markers: any[]): Marker[] {
             z: marker.pose.position.y, // Swap y and z
           },
           orientation: {
-            x: -marker.pose.orientation.x,
+            x: marker.pose.orientation.x,
             y: marker.pose.orientation.z, // Swap y and z
             z: marker.pose.orientation.y, // Swap y and z
             w: marker.pose.orientation.w,

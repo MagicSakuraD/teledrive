@@ -348,6 +348,32 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
       });
 
+      //订阅参考中心线/visualization/reference_central_lines
+      const referenceCentralLinesListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/visualization/reference_central_lines",
+        messageType: "visualization_msgs/MarkerArray",
+      });
+
+      referenceCentralLinesListener.subscribe((message: any) => {
+        if (message) {
+         
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "CentralLines",
+              data: simplifyMarkers_tarj(message.markers),
+            });
+          }
+        }
+      });
+
+      //订阅道路边界/visulization/path_boundary
+      const pathBoundaryListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/visulization/path_boundary",
+        messageType: "visualization_msgs/MarkerArray",
+      });
+
       // 发布控制话题
       const controlTopic = new ROSLIB.Topic({
         ros: rosRef.current,
@@ -447,7 +473,6 @@ const Car = ({ remotePeerId = "control-002" }) => {
         name: receivedCamera,
         messageType: "sensor_msgs/CompressedImage",
       });
-      console.log(`订阅后话题🤑: ${receivedCamera}`);
 
       imageListenerRef.current.subscribe((message: any) => {
         const receivedImage = new Image();
