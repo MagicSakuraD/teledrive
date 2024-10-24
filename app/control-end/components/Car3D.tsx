@@ -15,6 +15,9 @@ import {
   BrightnessContrast,
 } from "@react-three/postprocessing";
 import FollowCamera from "./models/FollowCamera";
+import { CarModel } from "./models/car";
+import { ConeModel } from "./models/cone";
+import { WalkModel } from "./models/walk";
 
 type obstacleType = {
   type: number;
@@ -56,6 +59,14 @@ const Car3D: React.FC<Car3DProps> = ({
     ? obstacles.filter((obstacle: obstacleType) => obstacle.type === 9)
     : [];
 
+  const pedestrian_obstacles: obstacleType[] = Array.isArray(obstacles)
+    ? obstacles.filter((obstacle: obstacleType) => obstacle.type === 1)
+    : [];
+
+  const cone_obstacles: obstacleType[] = Array.isArray(obstacles)
+    ? obstacles.filter((obstacle: obstacleType) => obstacle.type === 2)
+    : [];
+
   const finalQuaternion = computeFinalQuaternion(localization.orientation);
 
   //中心线减去车辆位置
@@ -72,9 +83,9 @@ const Car3D: React.FC<Car3DProps> = ({
 
   return (
     <Canvas>
-      {/* <PerspectiveCamera makeDefault position={[10, 20, -6]} />
-      <OrbitControls target={[0, 0, 0]} /> */}
-      <FollowCamera quaternion={finalQuaternion} />
+      <PerspectiveCamera makeDefault position={[10, 20, -6]} />
+      <OrbitControls target={[0, 0, 0]} />
+      {/* <FollowCamera quaternion={finalQuaternion} /> */}
       <ambientLight intensity={0.5} />
       <directionalLight color="#eff6ff" position={[5, 60, 7]} intensity={1.5} />
       <EffectComposer>
@@ -92,11 +103,44 @@ const Car3D: React.FC<Car3DProps> = ({
       {car_obstacles.map(
         (obstacle: obstacleType, index: number) =>
           obstacle && (
-            <ModelSuv
+            <CarModel
               key={index}
               position={[
                 obstacle.position.x - localization.position.x,
                 obstacle.position.y - localization.position.y - 2,
+                obstacle.position.z - localization.position.z,
+              ]}
+              quaternion={computeFinalQuaternion(obstacle.orientation)}
+              scale={[1, 1, 1]}
+            />
+          )
+      )}
+      {/* cone障碍物 */}
+      {cone_obstacles.map(
+        (obstacle: obstacleType, index: number) =>
+          obstacle && (
+            <ConeModel
+              key={index}
+              position={[
+                obstacle.position.x - localization.position.x,
+                obstacle.position.y - localization.position.y,
+                obstacle.position.z - localization.position.z,
+              ]}
+              quaternion={computeFinalQuaternion(obstacle.orientation)}
+              scale={[1, 1, 1]}
+            />
+          )
+      )}
+
+      {/* pedestrian障碍物 */}
+      {pedestrian_obstacles.map(
+        (obstacle: obstacleType, index: number) =>
+          obstacle && (
+            <WalkModel
+              key={index}
+              position={[
+                obstacle.position.x - localization.position.x,
+                obstacle.position.y - localization.position.y,
                 obstacle.position.z - localization.position.z,
               ]}
               quaternion={computeFinalQuaternion(obstacle.orientation)}

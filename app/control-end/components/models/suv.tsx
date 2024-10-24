@@ -26,7 +26,7 @@ export function ModelSuv(props: JSX.IntrinsicElements["group"]) {
   const { nodes, materials } = useGLTF("/jeep.glb") as GLTFResult;
   return (
     <group {...props} dispose={null}>
-      <group name="Sketchfab_Scene">
+      <group name="Sketchfab_Scene" scale={0.8}>
         <group name="Sketchfab_model" rotation={[-Math.PI / 2, 0, 0]}>
           <group name="Jeep_Renegade_2016objcleanermaterialmergergles">
             <mesh

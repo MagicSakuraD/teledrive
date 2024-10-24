@@ -65,28 +65,22 @@ export function simplifyMarker_loc(message: any): pointMarker {
   };
 }
 
-export function simplifyMarkers_obs(markers: any[]): Marker[] {
-  return markers.map((marker) => {
-    switch (marker.type) {
-      case 9:
-        return {
-          type: marker.type,
-          position: {
-            x: -marker.pose.position.x,
-            y: marker.pose.position.z, // Swap y and z
-            z: marker.pose.position.y, // Swap y and z
-          },
-          orientation: {
-            x: marker.pose.orientation.x,
-            y: marker.pose.orientation.z, // Swap y and z
-            z: marker.pose.orientation.y, // Swap y and z
-            w: marker.pose.orientation.w,
-          },
-          scale: marker.scale,
-        };
-
-      default:
-        return marker; // 对于其他类型，返回原始对象
-    }
-  });
+export function simplifyMarkers_obs(markers: Marker[]): Marker[] {
+  return markers.map((marker) => ({
+    type: marker.type,
+    pose: {
+      position: {
+        x: -marker.pose.position.x,
+        y: marker.pose.position.z, // Swap y and z
+        z: marker.pose.position.y, // Swap y and z
+      },
+      orientation: {
+        x: marker.pose.orientation.x,
+        y: marker.pose.orientation.z, // Swap y and z
+        z: marker.pose.orientation.y, // Swap y and z
+        w: marker.pose.orientation.w,
+      },
+    },
+    scale: marker.scale,
+  }));
 }
