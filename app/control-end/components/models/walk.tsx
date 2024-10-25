@@ -24,7 +24,7 @@ export function WalkModel(props: JSX.IntrinsicElements["group"]) {
   const { actions } = useAnimations<THREE.AnimationClip>(animations, group);
   return (
     <group ref={group} {...props} dispose={null}>
-      <group name="Scene">
+      <group name="Scene" scale={0.4}>
         <group name="Armature" rotation={[Math.PI / 2, 0, 0]} scale={0.01}>
           <skinnedMesh
             name="BaseMeshBKP"

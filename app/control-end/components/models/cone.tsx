@@ -24,7 +24,7 @@ export function ConeModel(props: JSX.IntrinsicElements["group"]) {
   const { nodes, materials } = useGLTF("/trafic_cone.glb") as GLTFResult;
   return (
     <group {...props} dispose={null}>
-      <group name="Sketchfab_Scene">
+      <group name="Sketchfab_Scene" scale={0.3}>
         <group name="Sketchfab_model" rotation={[-Math.PI / 2, 0, 0]}>
           <group
             name="cc6db1857d3647199ffa86fb6ccbc901fbx"
