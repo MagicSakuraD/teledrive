@@ -317,11 +317,15 @@ const ControlEnd = () => {
   };
 
   return (
-    <div className="w-full min-[2560px]:w-5/6 flex flex-col gap-3 p-3 my-auto">
-      <div className="flex flex-row gap-2 w-full basis-3/5">
+    <div className="w-full min-[2460px]:w-5/6 flex flex-col gap-3 p-3 my-auto">
+      <div className="flex flex-row gap-2 w-full">
         <Card className="overflow-hidden grow">
           <div className="relative">
-            <video ref={videoRef} className="w-full h-auto" controls />
+            <video
+              ref={videoRef}
+              className="w-full h-auto aspect-[25/9]"
+              controls
+            />
             <Badge
               variant={"outline"}
               className="absolute border-none top-0 right-0 flex flex-row gap-1 items-center text-green-600 z-10"
@@ -372,7 +376,7 @@ const ControlEnd = () => {
         </Card>
 
         {/* threejs */}
-        <Card className=" basis-2/5">
+        <Card className=" basis-1/3">
           {localization && (
             <Car3D
               localization={localization}

@@ -6,7 +6,7 @@ import Link from "next/link";
 
 const Headerbar = () => {
   return (
-    <header className="sticky top-0 z-20 h-16 flex items-center justify-between border-b bg-background/30 px-4 backdrop-blur-sm">
+    <header className="sticky top-0 z-20 h-16 flex items-center justify-between px-4 bg-transparent">
       <Link href="/">
         <div className="flex flex-row gap-2 items-center justify-center">
           <Button variant="outline" size="icon" aria-label="Home">

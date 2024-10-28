@@ -502,13 +502,20 @@ const Car = ({ remotePeerId = "control-002" }) => {
   }, [receivedCamera]);
 
   return (
-    <div className="container my-auto">
-      <Card className="">
+    <div className="container my-auto flex flex-row gap-3">
+      <Card className="grow">
+        <CardHeader>
+          <CardTitle>视频画面</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <canvas ref={canvasRef} className="w-full aspect-[25/9]" />
+        </CardContent>
+      </Card>
+      <Card>
         <CardHeader>
           <CardTitle>车端信息</CardTitle>
         </CardHeader>
         <CardContent>
-          <canvas ref={canvasRef} className="w-full" />
           <p>车端ID: {peerId}</p>
           <p>状态: {connected ? "已连接" : "未连接"}</p>
           <p>转向: {Math.floor(showControl.rotation)}°</p>

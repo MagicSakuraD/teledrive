@@ -5,8 +5,8 @@ import * as THREE from "three";
 // 创建跟随相机组件
 const FollowCamera = ({ quaternion }: { quaternion: THREE.Quaternion }) => {
   const { camera } = useThree();
-  const cameraOffset = useRef(new THREE.Vector3(0, 20, -10)); // 相机相对车辆的偏移量
-  const targetOffset = useRef(new THREE.Vector3(0, 0, 12)); // 相机看向的目标点偏移量
+  const cameraOffset = useRef(new THREE.Vector3(0, 20, -4)); // 相机相对车辆的偏移量
+  const targetOffset = useRef(new THREE.Vector3(0, 0, 8)); // 相机看向的目标点偏移量
 
   useFrame(() => {
     // 计算相机位置
