@@ -20,7 +20,7 @@ import { ConeModel } from "./models/cone";
 import { WalkModel } from "./models/walk";
 
 type obstacleType = {
-  type: number;
+  text: string;
   position: {
     x: number;
     y: number;
@@ -55,16 +55,19 @@ const Car3D: React.FC<Car3DProps> = ({
   centralLines,
   boundary,
 }) => {
+  console.log("obstacles", obstacles);
   const car_obstacles: obstacleType[] = Array.isArray(obstacles)
-    ? obstacles.filter((obstacle: obstacleType) => obstacle.type === 9)
+    ? obstacles.filter((obstacle: obstacleType) => obstacle.text === "CAR")
     : [];
 
   const pedestrian_obstacles: obstacleType[] = Array.isArray(obstacles)
-    ? obstacles.filter((obstacle: obstacleType) => obstacle.type === 1)
+    ? obstacles.filter(
+        (obstacle: obstacleType) => obstacle.text === "PEDESTRIAN"
+      )
     : [];
 
   const cone_obstacles: obstacleType[] = Array.isArray(obstacles)
-    ? obstacles.filter((obstacle: obstacleType) => obstacle.type === 2)
+    ? obstacles.filter((obstacle: obstacleType) => obstacle.text === "CONE")
     : [];
 
   const finalQuaternion = computeFinalQuaternion(localization.orientation);
