@@ -16,6 +16,8 @@ export interface Marker {
   color?: { r: number; g: number; b: number; a: number };
 
   text?: string;
+
+  points?: { x: number; y: number; z: number }[];
 }
 
 export function simplifyMarkers_tarj(markers: Marker[]) {
@@ -69,18 +71,23 @@ export function simplifyMarker_loc(message: any): pointMarker {
 
 export function simplifyMarkers_obs(markers: Marker[]) {
   return markers.map((marker) => ({
+    type: marker.type,
     text: marker.text,
-    position: {
-      x: -marker.pose.position.x,
-      y: marker.pose.position.z, // Swap y and z
-      z: marker.pose.position.y, // Swap y and z
-    },
-    orientation: {
-      x: marker.pose.orientation.x,
-      y: marker.pose.orientation.z, // Swap y and z
-      z: marker.pose.orientation.y, // Swap y and z
-      w: marker.pose.orientation.w,
+    pose: {
+      position: {
+        x: -marker.pose.position.x,
+        y: marker.pose.position.z, // Swap y and z
+        z: marker.pose.position.y, // Swap y and z
+      },
+      orientation: {
+        x: marker.pose.orientation.x,
+        y: marker.pose.orientation.z, // Swap y and z
+        z: marker.pose.orientation.y, // Swap y and z
+        w: marker.pose.orientation.w,
+      },
     },
     scale: marker.scale,
+    color: marker.color,
+    points: marker.points,
   }));
 }
