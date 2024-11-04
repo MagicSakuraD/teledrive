@@ -88,6 +88,10 @@ export function simplifyMarkers_obs(markers: Marker[]) {
     },
     scale: marker.scale,
     color: marker.color,
-    points: marker.points,
+    points: marker.points!.map((point) => ({
+      x: -point.x,
+      y: point.z,
+      z: point.y,
+    })),
   }));
 }

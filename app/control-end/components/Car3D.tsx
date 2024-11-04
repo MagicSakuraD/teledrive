@@ -19,6 +19,7 @@ import { ConeModel } from "./models/cone";
 import { Marker } from "@/lib/simplifyMarkers";
 import { WalkModel } from "./models/walk";
 import { ArrowModel } from "./models/arrow";
+import Polygon from "./models/polygon";
 
 export type trajType = {
   id: string;
@@ -45,7 +46,6 @@ const Car3D: React.FC<Car3DProps> = ({
   centralLines,
   boundary,
 }) => {
-  console.log("obstacles", obstacles);
   const textObstacles: Marker[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: Marker) => obstacle.type === 9)
     : [];
@@ -53,6 +53,12 @@ const Car3D: React.FC<Car3DProps> = ({
   const arrowObstacles: Marker[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: Marker) => obstacle.type === 0)
     : [];
+
+  const polygonObstacles: Marker[] = Array.isArray(obstacles)
+    ? obstacles.filter((obstacle: Marker) => obstacle.type === 4)
+    : [];
+
+  console.log("localization:", localization);
 
   const finalQuaternion = computeFinalQuaternion(localization.orientation);
 
@@ -80,39 +86,15 @@ const Car3D: React.FC<Car3DProps> = ({
         <BrightnessContrast brightness={0.03} contrast={0.2} />
         <HueSaturation hue={0.0} saturation={0.3} />
       </EffectComposer> */}
-
       <ModelSuv
         position={[0, 0, 0]} // 车辆位置为原点
         quaternion={finalQuaternion}
         scale={[1, 1, 1]}
       />
 
-      <Text3D
-        font="./MiSans Normal_Regular.json"
-        position={[0, 5, 0]}
-        rotation={[Math.PI * 0.5, Math.PI, 0]}
-        size={1} // 控制字体大小
-        height={0.2} // 控制文字厚度
-        bevelEnabled // 添加斜角效果
-        bevelSize={0.05} // 斜角大小
-        smooth={1} // 平滑程度
-      >
-        car
-      </Text3D>
-
       {textObstacles.map(
         (obstacle: Marker, index: number) =>
           obstacle && (
-            // <CarModel
-            //   key={index}
-            //   position={[
-            //     obstacle.position.x - localization.position.x,
-            //     obstacle.position.y - localization.position.y - 2,
-            //     obstacle.position.z - localization.position.z,
-            //   ]}
-            //   quaternion={computeFinalQuaternion(obstacle.orientation)}
-            //   scale={[1, 1, 1]}
-            // />
             <Text3D
               key={index}
               font="./MiSans Normal_Regular.json"
@@ -125,46 +107,51 @@ const Car3D: React.FC<Car3DProps> = ({
                     ]
                   : [0, 0, 0]
               }
-              rotation={[Math.PI * 0.5, Math.PI, 0]}
+              rotation={[Math.PI / 2, Math.PI, -Math.PI / 4]}
               size={1} // 控制字体大小
               height={0.2} // 控制文字厚度
               letterSpacing={0.8} // 控制字间距
               bevelEnabled // 添加斜角效果
               bevelSize={0.05} // 斜角大小
             >
-              {obstacle.text}
+              {obstacle.text?.toLocaleLowerCase()}
             </Text3D>
           )
       )}
 
-      {/* // 显示箭头 */}
-      {arrowObstacles.map((obstacle: Marker, index: number) => (
-        <ArrowModel
-          key={index}
-          position={[
-            obstacle.pose.position.x - localization.position.x,
-            obstacle.pose.position.y - localization.position.y,
-            obstacle.pose.position.z - localization.position.z,
-          ]}
-          quaternion={computeFinalQuaternion(obstacle.pose.orientation)}
-          scale={[1, 1, 1]}
-        />
-      ))}
+      <Polygon markers={polygonObstacles} localization={localization} />
 
-      {/* 显示行人 */}
-
+      {arrowObstacles.map((obstacle: Marker, index: number) => {
+        const obstacleQuaternion = computeFinalQuaternion(
+          obstacle.pose.orientation
+        );
+        const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          Math.PI
+        );
+        const finalQuaternion = obstacleQuaternion.multiply(rotationQuaternion);
+        return (
+          <ArrowModel
+            key={index}
+            position={[
+              obstacle.pose.position.x - localization.position.x,
+              obstacle.pose.position.y - localization.position.y,
+              obstacle.pose.position.z - localization.position.z,
+            ]}
+            quaternion={finalQuaternion}
+            scale={[1, 1, 1]}
+          />
+        );
+      })}
       {/* 使用 PathBoundary 组件 */}
       {boundary && (
         <PathBoundary boundary={boundary} localization={localization} />
       )}
-
       {centralLines && <RoadScene centralLines={Rodeline} />}
-
       {/* 显示轨迹，轨迹点也减去车辆位置 */}
       {/* {trajectory && trajectory.length > 0 && (
         <TrajectoryLine trajectory={trajectory} localization={localization} />
       )} */}
-
       {/* <gridHelper args={[60, 6]} /> */}
       {/* <axesHelper args={[200]} /> */}
     </Canvas>
