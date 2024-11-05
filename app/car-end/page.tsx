@@ -20,6 +20,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
   const imageListenerRef = useRef<ROSLIB.Topic | null>(null);
 
   const [feedback_sp, setSpeed] = useState<number | null>(0);
+  const [steer_angle, setSteerAngle] = useState<number | null>(0);
 
   // 使用 useRef 存储接收到的控制数据
   const controlDataRef = useRef({
@@ -84,7 +85,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
         drawGuideLine(
           avmimageWidth / 2,
           imageHeight / 2,
-          controlDataRef.current.rotation / 15.58,
+          (steer_angle ?? 1) / 15.58,
           ctx,
           controlDataRef.current.gear
         );
@@ -270,6 +271,25 @@ const Car = ({ remotePeerId = "control-002" }) => {
             connRef.current.send({
               topic: "feedback_sp",
               data: message.speed_cms,
+            });
+          }
+        }
+      });
+
+      // 订阅车辆转角话题
+      const steerListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/steer_feedback",
+        messageType: "cyber_msgs/SteerFeedback",
+      });
+
+      steerListener.subscribe((message: any) => {
+        if (message) {
+          setSteerAngle(parseFloat(message.SteerAngle.toFixed(2)));
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "feedback_steer",
+              data: message.SteerAngle,
             });
           }
         }
@@ -511,18 +531,18 @@ const Car = ({ remotePeerId = "control-002" }) => {
           <canvas ref={canvasRef} className="w-full aspect-[25/9]" />
         </CardContent>
       </Card>
-      <Card>
+      <Card className="min-w-96">
         <CardHeader>
           <CardTitle>车端信息</CardTitle>
         </CardHeader>
         <CardContent>
           <p>车端ID: {peerId}</p>
           <p>状态: {connected ? "已连接" : "未连接"}</p>
-          <p>转向: {Math.floor(showControl.rotation)}°</p>
+          <p>转向: {Math.floor(steer_angle ?? 0)}°</p>
           <p>刹车: {Math.floor(showControl.brake * 100)}%</p>
           <p>油门: {Math.floor(showControl.throttle * 100)}%</p>
           <p>挡位: {showControl.gear}</p>
-          <p>速度：{feedback_sp} cm/s</p>
+          <p>速度：{(((feedback_sp ?? 0) * 3.6) / 100).toFixed(2)} km/h</p>
           <p>摄像头：{receivedCamera}</p>
         </CardContent>
       </Card>

@@ -121,7 +121,7 @@ const Car3D: React.FC<Car3DProps> = ({
 
       <Polygon markers={polygonObstacles} localization={localization} />
 
-      {arrowObstacles.map((obstacle: Marker, index: number) => {
+      {/* {arrowObstacles.map((obstacle: Marker, index: number) => {
         const obstacleQuaternion = computeFinalQuaternion(
           obstacle.pose.orientation
         );
@@ -142,7 +142,7 @@ const Car3D: React.FC<Car3DProps> = ({
             scale={[1, 1, 1]}
           />
         );
-      })}
+      })} */}
       {/* 使用 PathBoundary 组件 */}
       {boundary && (
         <PathBoundary boundary={boundary} localization={localization} />
