@@ -20,9 +20,11 @@ import { Marker } from "@/lib/simplifyMarkers";
 import { WalkModel } from "./models/walk";
 import { ArrowModel } from "./models/arrow";
 import Polygon from "./models/polygon";
+import Lanes from "./models/lane";
 
 export type trajType = {
   id: string;
+  type?: string;
   position: {
     x: number;
     y: number;
@@ -37,6 +39,7 @@ interface Car3DProps {
   trajectory: trajType[];
   centralLines: trajType[];
   boundary: trajType[];
+  normalRoad: Marker[];
 }
 
 const Car3D: React.FC<Car3DProps> = ({
@@ -45,6 +48,7 @@ const Car3D: React.FC<Car3DProps> = ({
   trajectory,
   centralLines,
   boundary,
+  normalRoad,
 }) => {
   const textObstacles: Marker[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: Marker) => obstacle.type === 9)
@@ -57,8 +61,6 @@ const Car3D: React.FC<Car3DProps> = ({
   const polygonObstacles: Marker[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: Marker) => obstacle.type === 4)
     : [];
-
-  console.log("localization:", localization);
 
   const finalQuaternion = computeFinalQuaternion(localization.orientation);
 
@@ -76,9 +78,9 @@ const Car3D: React.FC<Car3DProps> = ({
 
   return (
     <Canvas>
-      {/* <PerspectiveCamera makeDefault position={[0, 20, -4]} />
-      <OrbitControls target={[0, 0, 0]} /> */}
-      <FollowCamera quaternion={finalQuaternion} />
+      <PerspectiveCamera makeDefault position={[0, 20, -4]} />
+      <OrbitControls target={[0, 0, 0]} />
+      {/* <FollowCamera quaternion={finalQuaternion} /> */}
       <ambientLight intensity={0.5} />
       <directionalLight color="#eff6ff" position={[5, 60, 7]} intensity={1.5} />
       {/* <EffectComposer>
@@ -121,17 +123,21 @@ const Car3D: React.FC<Car3DProps> = ({
 
       <Polygon markers={polygonObstacles} localization={localization} />
 
+      {normalRoad && normalRoad.length > 2 && (
+        <Lanes roads={normalRoad} localization={localization} />
+      )}
+
       {/* {arrowObstacles.map((obstacle: Marker, index: number) => {
-        const obstacleQuaternion = computeFinalQuaternion(
-          obstacle.pose.orientation
-        );
-        const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(
-          new THREE.Vector3(0, 1, 0),
-          Math.PI
-        );
-        const finalQuaternion = obstacleQuaternion.multiply(rotationQuaternion);
-        return (
-          <ArrowModel
+          const obstacleQuaternion = computeFinalQuaternion(
+            obstacle.pose.orientation
+          );
+          const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            Math.PI
+          );
+          const finalQuaternion = obstacleQuaternion.multiply(rotationQuaternion);
+          return (
+            <ArrowModel
             key={index}
             position={[
               obstacle.pose.position.x - localization.position.x,
@@ -140,18 +146,19 @@ const Car3D: React.FC<Car3DProps> = ({
             ]}
             quaternion={finalQuaternion}
             scale={[1, 1, 1]}
-          />
-        );
-      })} */}
+            />
+          );
+          })} */}
       {/* 使用 PathBoundary 组件 */}
       {boundary && (
         <PathBoundary boundary={boundary} localization={localization} />
       )}
       {centralLines && <RoadScene centralLines={Rodeline} />}
       {/* 显示轨迹，轨迹点也减去车辆位置 */}
-      {/* {trajectory && trajectory.length > 0 && (
+      {trajectory && trajectory.length > 0 && (
         <TrajectoryLine trajectory={trajectory} localization={localization} />
-      )} */}
+      )}
+
       {/* <gridHelper args={[60, 6]} /> */}
       {/* <axesHelper args={[200]} /> */}
     </Canvas>

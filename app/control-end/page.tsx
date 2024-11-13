@@ -143,9 +143,16 @@ const ControlEnd = () => {
               setFeedbackSpeed(receivedData); // 你可以将接收到的速度信息更新到状态中
               break;
 
+            case "feedback_steer":
+              // 如果接收到的是转向反馈信息
+              // console.log("转向反馈信息", receivedData);
+              break;
+
             case "road":
               // 如果接收到的是道路信息
-              setNormalRoad(receivedData); // 你可以将接收到的道路信息更新到状态中
+              if (receivedData.length >= 2 && !normalRoad) {
+                setNormalRoad(receivedData); // 你可以将接收到的道路信息更新到状态中
+              }
               break;
 
             case "traj":
@@ -175,6 +182,12 @@ const ControlEnd = () => {
               // 如果接收到的是路径边界信息
               // console.log("路径边界信息", receivedData);
               setBoundary(receivedData); // 你可以将接收到的路径边界信息更新到状态中
+              break;
+
+            case "road":
+              // 如果接收到的是道路信息
+              // console.log("道路信息", receivedData);
+              setNormalRoad(receivedData); // 你可以将接收到的道路信息更新到状态中
               break;
 
             default:
@@ -319,6 +332,21 @@ const ControlEnd = () => {
   return (
     <div className="w-full min-[2460px]:w-5/6 flex flex-col gap-3 p-3 my-auto">
       <div className="flex flex-row gap-2 w-full">
+        {/* threejs */}
+        <Card className=" basis-1/3">
+          {localization && (
+            <Car3D
+              localization={localization}
+              obstacles={obstacles}
+              trajectory={trajectory}
+              centralLines={centralLines}
+              boundary={boundary}
+              normalRoad={normalRoad}
+            />
+          )}
+        </Card>
+
+        {/* video */}
         <Card className="overflow-hidden grow">
           <div className="relative">
             <video
@@ -373,19 +401,6 @@ const ControlEnd = () => {
               </SelectContent>
             </Select>
           </CardFooter>
-        </Card>
-
-        {/* threejs */}
-        <Card className=" basis-1/3">
-          {localization && (
-            <Car3D
-              localization={localization}
-              obstacles={obstacles}
-              trajectory={trajectory}
-              centralLines={centralLines}
-              boundary={boundary}
-            />
-          )}
         </Card>
       </div>
 

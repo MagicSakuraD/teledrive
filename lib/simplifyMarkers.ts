@@ -1,6 +1,8 @@
+import { Color } from "three";
+
 export interface Marker {
   id?: string;
-  pose: {
+  pose?: {
     position: {
       x: number;
       y: number;
@@ -24,9 +26,9 @@ export function simplifyMarkers_tarj(markers: Marker[]) {
   return markers.map((marker) => ({
     id: marker.id,
     position: {
-      x: -marker.pose.position.x,
-      y: marker.pose.position.z, // Swap y and z
-      z: marker.pose.position.y,
+      x: -marker.pose!.position.x,
+      y: marker.pose!.position.z, // Swap y and z
+      z: marker.pose!.position.y,
     },
   }));
 }
@@ -35,9 +37,9 @@ export function simplifyMarkers_boundary(markers: Marker[]) {
   return markers.map((marker) => ({
     id: marker.id,
     position: {
-      x: -marker.pose.position.x,
-      y: marker.pose.position.z, // Swap y and z
-      z: marker.pose.position.y,
+      x: -marker.pose!.position.x,
+      y: marker.pose!.position.z, // Swap y and z
+      z: marker.pose!.position.y,
     },
     color: {
       r: marker.color!.r,
@@ -69,21 +71,34 @@ export function simplifyMarker_loc(message: any): pointMarker {
   };
 }
 
+export function simplifyRoads(roads: Marker[]) {
+  return roads.map((road) => ({
+    id: road.id,
+    type: road.type,
+    points: road.points!.map((point) => ({
+      x: -point.x,
+      y: point.z,
+      z: point.y,
+    })),
+    Color: road.color,
+  }));
+}
+
 export function simplifyMarkers_obs(markers: Marker[]) {
   return markers.map((marker) => ({
     type: marker.type,
     text: marker.text,
     pose: {
       position: {
-        x: -marker.pose.position.x,
-        y: marker.pose.position.z, // Swap y and z
-        z: marker.pose.position.y, // Swap y and z
+        x: -marker.pose!.position.x,
+        y: marker.pose!.position.z, // Swap y and z
+        z: marker.pose!.position.y, // Swap y and z
       },
       orientation: {
-        x: marker.pose.orientation.x,
-        y: marker.pose.orientation.z, // Swap y and z
-        z: marker.pose.orientation.y, // Swap y and z
-        w: marker.pose.orientation.w,
+        x: marker.pose!.orientation.x,
+        y: marker.pose!.orientation.z, // Swap y and z
+        z: marker.pose!.orientation.y, // Swap y and z
+        w: marker.pose!.orientation.w,
       },
     },
     scale: marker.scale,

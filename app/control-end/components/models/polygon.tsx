@@ -43,7 +43,7 @@ const Polygon: React.FC<PolygonProps> = ({ markers, localization }) => {
 
           // 创建拉伸几何体
           const extrudeSettings = {
-            depth: 1, // y轴高度为2
+            depth: -1.5, // y轴高度为2
             bevelEnabled: false, // 禁用斜角
           };
 

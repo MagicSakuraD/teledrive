@@ -10,6 +10,7 @@ import {
   simplifyMarker_loc,
   simplifyMarkers_obs,
   simplifyMarkers_boundary,
+  simplifyRoads,
 } from "@/lib/simplifyMarkers";
 
 const Car = ({ remotePeerId = "control-002" }) => {
@@ -198,7 +199,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
     return () => {
       peer.destroy();
-      console.log("销毁车端 peer.");
+      console.log("车端 peer 已销毁.");
     };
   }, [remotePeerId]); // 添加 remotePeerId 作为依赖项
 
@@ -304,12 +305,11 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
       roadListener.subscribe((message: any) => {
         if (message) {
-          // console.log("道路", message.markers);
           if (connRef.current && connRef.current.open) {
-            // connRef.current.send({
-            //   topic: "road",
-            //   data: message.markers,
-            // });
+            connRef.current.send({
+              topic: "road",
+              data: simplifyRoads(message.markers),
+            });
           }
         }
       });
