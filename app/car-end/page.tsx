@@ -23,6 +23,9 @@ const Car = ({ remotePeerId = "control-002" }) => {
   const [feedback_sp, setSpeed] = useState<number | null>(0);
   const [steer_angle, setSteerAngle] = useState<number | null>(0);
 
+  // 状态来存储延迟
+  const [latencyRTT, setLatencyRTT] = useState<number>(0);
+
   // 使用 useRef 存储接收到的控制数据
   const controlDataRef = useRef({
     rotation: 0,
@@ -50,6 +53,9 @@ const Car = ({ remotePeerId = "control-002" }) => {
   // UseRefs to store the latest images
   const avmImageRef = useRef<HTMLImageElement | null>(null);
   const receivedImageRef = useRef<HTMLImageElement | null>(null);
+
+  let rttArray: number[] = []; // RTT 延时数据数组
+  const maxRTTArrayLength = 10; // 数据达到 10 条时发送
 
   const drawImagesOnCanvas = (ctx: CanvasRenderingContext2D | null) => {
     if (canvasRef.current && avmImageRef.current && receivedImageRef.current) {
@@ -224,6 +230,8 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
       const ctx = canvasRef.current.getContext("2d");
       const videoStream = canvasRef.current.captureStream();
+
+      let animationFrameId: number;
 
       if (!callStarted && peerRef.current && peerRef.current.open) {
         const call = peerRef.current.call(remotePeerId, videoStream);
@@ -408,7 +416,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
       // 发布控制话题
       const controlTopic = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: "/visulization/traj",
+        name: "/rock_can/steer_command",
         messageType: "cyber_msgs/steer_cmd",
       });
 
@@ -425,7 +433,31 @@ const Car = ({ remotePeerId = "control-002" }) => {
       });
 
       const sendControlData = () => {
-        if (rosRef.current && connected) {
+        if (rosRef.current && connected && connRef.current) {
+          const peerConnection = connRef.current
+            .peerConnection as RTCPeerConnection;
+
+          const collectRTT = async () => {
+            const stats = await peerConnection.getStats();
+            stats.forEach((report) => {
+              if (report.type === "candidate-pair") {
+                const rtt = report.currentRoundTripTime;
+                if (rtt !== undefined) {
+                  setLatencyRTT(rtt);
+                  rttArray.push(rtt); // 添加 RTT 值到数组中
+
+                  if (rttArray.length >= maxRTTArrayLength) {
+                    // 如果 RTT 数组长度达到设定值，发送并重置
+                    sendRTTSequence(rttArray);
+                    rttArray = []; // 重置数组
+                  }
+                }
+              }
+            });
+          };
+
+          collectRTT(); // 初始调用
+
           const controlDataMessage = new ROSLIB.Message({
             is_updated: true,
             enable_auto_steer: true,
@@ -443,13 +475,13 @@ const Car = ({ remotePeerId = "control-002" }) => {
               gear_num = 2;
               break;
             case "N":
-              gear_num = 0;
+              gear_num = -1;
               break;
             case "p":
-              gear_num = 0;
+              gear_num = -2;
               break;
             default:
-              gear_num = 0;
+              gear_num = -2;
               break;
           }
 
@@ -471,7 +503,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
           brakeTopic.publish(brakeDataMessage);
         }
 
-        requestAnimationFrame(sendControlData);
+        animationFrameId = requestAnimationFrame(sendControlData);
       };
 
       sendControlData();
@@ -487,6 +519,12 @@ const Car = ({ remotePeerId = "control-002" }) => {
         controlTopic.unsubscribe();
         speedTopic.unsubscribe();
         brakeTopic.unsubscribe();
+        steerListener.unsubscribe();
+        obstaclesListener.unsubscribe();
+        localizationListener.unsubscribe();
+        trajListener.unsubscribe();
+        referenceCentralLinesListener.unsubscribe();
+        cancelAnimationFrame(animationFrameId);
       };
     }
   }, [connected]);
@@ -521,6 +559,23 @@ const Car = ({ remotePeerId = "control-002" }) => {
     }
   }, [receivedCamera]);
 
+  // 发送 RTT 时延数据到 ROS
+  const sendRTTSequence = (rttArray: number[]) => {
+    if (rosRef.current && connected) {
+      const rttMessage = new ROSLIB.Message({
+        data: rttArray, // 发送 RTT 数据
+      });
+
+      const delayTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/delay_time", // RTT 延时话题
+        messageType: "std_msgs/Float64MultiArray", // 消息类型
+      });
+
+      delayTopic.publish(rttMessage); // 发布消息
+    }
+  };
+
   return (
     <div className="container my-auto flex flex-row gap-3">
       <Card className="grow">
@@ -544,6 +599,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
           <p>挡位: {showControl.gear}</p>
           <p>速度：{(((feedback_sp ?? 0) * 3.6) / 100).toFixed(2)} km/h</p>
           <p>摄像头：{receivedCamera}</p>
+          <p>往返延迟：{`${latencyRTT * 1000} ms`}</p>
         </CardContent>
       </Card>
     </div>
