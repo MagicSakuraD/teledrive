@@ -14,7 +14,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "远程驾驶",
-  description: "星际迷航",
+  description:
+    "通过先进的点对点通信技术，提供高效、稳定的远程控制解决方案，让您在任何地方都能轻松掌控车辆，开创智能驾驶的新未来。",
 };
 
 export default function RootLayout({

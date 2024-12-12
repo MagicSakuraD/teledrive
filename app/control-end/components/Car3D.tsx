@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { OrbitControls, PerspectiveCamera, Text3D } from "@react-three/drei";
 import { ModelSuv } from "./models/suv";
 import { pointMarker } from "@/lib/simplifyMarkers";
-import RoadScene from "./models/Road";
+import Road from "./models/Road";
 import computeFinalQuaternion from "./utils3D/computeFinalQuaternion";
 import TrajectoryLine from "./models/Trajectory"; // 导入 TrajectoryLine
 import PathBoundary from "./models/PathBoundary"; // 导入 PathBoundary
@@ -50,6 +50,7 @@ const Car3D: React.FC<Car3DProps> = ({
   boundary,
   normalRoad,
 }) => {
+  console.log(trajectory, "trajectory");
   const textObstacles: Marker[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: Marker) => obstacle.type === 9)
     : [];
@@ -77,17 +78,16 @@ const Car3D: React.FC<Car3DProps> = ({
     : [];
 
   return (
-    <Canvas>
-      <PerspectiveCamera makeDefault position={[0, 20, -4]} />
-      <OrbitControls target={[0, 0, 0]} />
-      {/* <FollowCamera quaternion={finalQuaternion} /> */}
+    <Canvas className="bg-gray-900 rounded-md">
+      {/* <PerspectiveCamera makeDefault position={[0, 20, -4]} />
+      <OrbitControls target={[0, 0, 0]} /> */}
+      <FollowCamera quaternion={finalQuaternion} />
       <ambientLight intensity={0.5} />
       <directionalLight color="#eff6ff" position={[5, 60, 7]} intensity={1.5} />
-      {/* <EffectComposer>
-       
-        <BrightnessContrast brightness={0.03} contrast={0.2} />
-        <HueSaturation hue={0.0} saturation={0.3} />
-      </EffectComposer> */}
+      <EffectComposer>
+        <BrightnessContrast brightness={0.01} contrast={0.1} />
+        <HueSaturation hue={0.0} saturation={0.2} />
+      </EffectComposer>
       <ModelSuv
         position={[0, 0, 0]} // 车辆位置为原点
         quaternion={finalQuaternion}
@@ -150,10 +150,10 @@ const Car3D: React.FC<Car3DProps> = ({
           );
           })} */}
       {/* 使用 PathBoundary 组件 */}
-      {boundary && (
+      {/* {boundary && (
         <PathBoundary boundary={boundary} localization={localization} />
-      )}
-      {centralLines && <RoadScene centralLines={Rodeline} />}
+      )} */}
+      {centralLines && <Road centralLines={Rodeline} roadWidth={5} />}
       {/* 显示轨迹，轨迹点也减去车辆位置 */}
       {trajectory && trajectory.length > 0 && (
         <TrajectoryLine trajectory={trajectory} localization={localization} />

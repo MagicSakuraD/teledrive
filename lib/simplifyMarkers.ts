@@ -33,6 +33,17 @@ export function simplifyMarkers_tarj(markers: Marker[]) {
   }));
 }
 
+export function bestTrajectory(trajectory: Marker[]) {
+  return trajectory.map((marker) => ({
+    id: marker.id,
+    position: {
+      x: -marker.points![0].x,
+      y: marker.points![0].z,
+      z: marker.points![0].y,
+    },
+  }));
+}
+
 export function simplifyMarkers_boundary(markers: Marker[]) {
   return markers.map((marker) => ({
     id: marker.id,

@@ -23,7 +23,7 @@ const Lane = React.memo(
       );
     }, [normalRoad.points, localization.position]);
 
-    return <Line points={points} color="#22c55e" lineWidth={5} />;
+    return <Line points={points} color="#d4d4d4" lineWidth={5} />;
   }
 );
 

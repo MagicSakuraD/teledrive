@@ -11,6 +11,7 @@ import {
   simplifyMarkers_obs,
   simplifyMarkers_boundary,
   simplifyRoads,
+  bestTrajectory,
 } from "@/lib/simplifyMarkers";
 
 const Car = ({ remotePeerId = "control-002" }) => {
@@ -22,6 +23,8 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
   const [feedback_sp, setSpeed] = useState<number | null>(0);
   const [steer_angle, setSteerAngle] = useState<number | null>(0);
+  const steerAngleRef = useRef<number | null>(0);
+  const gearRef = useRef<string | null>("N");
 
   // 状态来存储延迟
   const [latencyRTT, setLatencyRTT] = useState<number>(0);
@@ -92,9 +95,9 @@ const Car = ({ remotePeerId = "control-002" }) => {
         drawGuideLine(
           avmimageWidth / 2,
           imageHeight / 2,
-          (steer_angle ?? 1) / 15.58,
+          (steerAngleRef.current ?? 1) / 15.58,
           ctx,
-          controlDataRef.current.gear
+          gearRef.current ?? "N"
         );
       }
     }
@@ -275,6 +278,23 @@ const Car = ({ remotePeerId = "control-002" }) => {
       feedbackListener.subscribe((message: any) => {
         if (message) {
           setSpeed(message.speed_cms);
+          switch (message.gear) {
+            case 11:
+              gearRef.current = "D";
+              break;
+            case 9:
+              gearRef.current = "R";
+              break;
+            case 0:
+              gearRef.current = "N";
+              break;
+            case 10:
+              gearRef.current = "P";
+              break;
+            default:
+              gearRef.current = "N";
+              break;
+          }
 
           if (connRef.current && connRef.current.open) {
             connRef.current.send({
@@ -295,6 +315,8 @@ const Car = ({ remotePeerId = "control-002" }) => {
       steerListener.subscribe((message: any) => {
         if (message) {
           setSteerAngle(parseFloat(message.SteerAngle.toFixed(2)));
+          steerAngleRef.current =
+            parseFloat(message.SteerAngle.toFixed(2)) * -1;
           if (connRef.current && connRef.current.open) {
             connRef.current.send({
               topic: "feedback_steer",
@@ -360,18 +382,37 @@ const Car = ({ remotePeerId = "control-002" }) => {
       });
 
       // 订阅车辆轨迹话题traj
-      const trajListener = new ROSLIB.Topic({
+      // const trajListener = new ROSLIB.Topic({
+      //   ros: rosRef.current,
+      //   name: "/visulization/traj",
+      //   messageType: "visualization_msgs/MarkerArray",
+      // });
+
+      // trajListener.subscribe((message: any) => {
+      //   if (message) {
+      //     console.log("轨迹", message.markers);
+      //     if (connRef.current && connRef.current.open) {
+      //       connRef.current.send({
+      //         topic: "traj",
+      //         data: simplifyMarkers_tarj(message.markers),
+      //       });
+      //     }
+      //   }
+      // });
+
+      // 订阅车辆最好轨迹/visualization/best_trajectories
+      const bestTrajListener = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: "/visulization/traj",
+        name: "/visualization/best_trajectories",
         messageType: "visualization_msgs/MarkerArray",
       });
 
-      trajListener.subscribe((message: any) => {
+      bestTrajListener.subscribe((message: any) => {
         if (message) {
           if (connRef.current && connRef.current.open) {
             connRef.current.send({
               topic: "traj",
-              data: simplifyMarkers_tarj(message.markers),
+              data: bestTrajectory(message.markers),
             });
           }
         }
@@ -413,11 +454,30 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
       });
 
+      //订阅steer_test话题
+      const steer_testListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/steer_test",
+        messageType: "std_msgs/Float32",
+      });
+
+      steer_testListener.subscribe((message: any) => {
+        if (message) {
+          console.log("steer_test", message.data);
+        }
+      });
+
       // 发布控制话题
       const controlTopic = new ROSLIB.Topic({
         ros: rosRef.current,
         name: "/rock_can/steer_command",
         messageType: "cyber_msgs/steer_cmd",
+      });
+      //测试
+      const steerTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/test",
+        messageType: "std_msgs/Float32",
       });
 
       const speedTopic = new ROSLIB.Topic({
@@ -463,6 +523,13 @@ const Car = ({ remotePeerId = "control-002" }) => {
             enable_auto_steer: true,
             steer_cmd: controlDataRef.current.rotation * -1,
           });
+
+          // steerTopic.publish(controlDataRef.current.rotation * -1); 测试
+          const steerDataMessage = new ROSLIB.Message({
+            data: controlDataRef.current.rotation * -1,
+          });
+
+          steerTopic.publish(steerDataMessage);
 
           controlTopic.publish(controlDataMessage);
 
@@ -522,7 +589,8 @@ const Car = ({ remotePeerId = "control-002" }) => {
         steerListener.unsubscribe();
         obstaclesListener.unsubscribe();
         localizationListener.unsubscribe();
-        trajListener.unsubscribe();
+        // trajListener.unsubscribe();
+        bestTrajListener.unsubscribe();
         referenceCentralLinesListener.unsubscribe();
         cancelAnimationFrame(animationFrameId);
       };
@@ -594,6 +662,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
           <p>车端ID: {peerId}</p>
           <p>状态: {connected ? "已连接" : "未连接"}</p>
           <p>转向: {Math.floor(steer_angle ?? 0)}°</p>
+          {/* <p>转向：{Math.floor(showControl.rotation)}°</p> */}
           <p>刹车: {Math.floor(showControl.brake * 100)}%</p>
           <p>油门: {Math.floor(showControl.throttle * 100)}%</p>
           <p>挡位: {showControl.gear}</p>

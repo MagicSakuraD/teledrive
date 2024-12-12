@@ -35,7 +35,7 @@ export function ModelSuv(props: JSX.IntrinsicElements["group"]) {
   // Total length is 4.515
   // Distance from front of car to rear axle = 4.515 - 0.96 = 3.555
   // We want to move the model forward by this amount
-  const rearAxleOffset = 3.555 / 2; // Divide by 2 because the origin is in the center
+  const rearAxleOffset = 1.555; // Divide by 2 because the origin is in the center
 
   return (
     <group {...props} dispose={null}>

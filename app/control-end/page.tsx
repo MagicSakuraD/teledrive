@@ -54,7 +54,7 @@ const ControlEnd = () => {
     brake: 0,
     throttle: 0,
   });
-  const [currentGear, setCurrentGear] = useState<string>("N");
+  const [currentGear, setCurrentGear] = useState<string>("D");
   // 用于保存反馈速度的 state
   const [feedbackSpeed, setFeedbackSpeed] = useState<number>(0);
   const [normalRoad, setNormalRoad] = useState<any>(null);

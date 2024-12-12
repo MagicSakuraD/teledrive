@@ -17,14 +17,14 @@ const TrajectoryLine = React.memo(
         (marker) =>
           new THREE.Vector3(
             marker.position.x - localization.position.x,
-            marker.position.y - localization.position.y + 0.5,
+            marker.position.y - localization.position.y + 0.1,
             marker.position.z - localization.position.z
           )
       );
     }, [trajectory, localization.position]);
 
     const colors = useMemo(() => {
-      const startColor = new THREE.Color("#3b82f6");
+      const startColor = new THREE.Color("#2563eb");
       const numPoints = trajectory.length;
       const colorArray = [];
       for (let i = 0; i < numPoints; i++) {
@@ -43,7 +43,7 @@ const TrajectoryLine = React.memo(
       <Line
         points={points}
         // color="#22c55e"
-        lineWidth={30}
+        lineWidth={20}
         vertexColors={colors}
         transparent
       />
