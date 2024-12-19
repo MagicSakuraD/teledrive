@@ -153,11 +153,11 @@ const Car3D: React.FC<Car3DProps> = ({
       {/* {boundary && (
         <PathBoundary boundary={boundary} localization={localization} />
       )} */}
-      {centralLines && <Road centralLines={Rodeline} roadWidth={5} />}
+      {/* {centralLines && <Road centralLines={Rodeline} roadWidth={5} />} */}
       {/* 显示轨迹，轨迹点也减去车辆位置 */}
-      {trajectory && trajectory.length > 0 && (
+      {/* {trajectory && trajectory.length > 0 && (
         <TrajectoryLine trajectory={trajectory} localization={localization} />
-      )}
+      )} */}
 
       {/* <gridHelper args={[60, 6]} /> */}
       {/* <axesHelper args={[200]} /> */}

@@ -47,7 +47,6 @@ export default function drawGuideLine(
 ) {
   const wheelbase = 185.5; // 轴距
   const width = 130.2; // 车辆宽度
-  console.log(gear, "挡位");
 
   angle = angle === 0 ? 0.01 : angle; //避免angle为0时
   // 将角度转换为弧度

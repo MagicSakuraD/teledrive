@@ -4,6 +4,7 @@ import Peer, { DataConnection, MediaConnection } from "peerjs";
 import ROSLIB from "roslib";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import drawGuideLine from "@/lib/drawGuideLine";
+import drawText from "@/lib/drawtext";
 import { set } from "zod";
 import {
   simplifyMarkers_tarj,
@@ -24,7 +25,10 @@ const Car = ({ remotePeerId = "control-002" }) => {
   const [feedback_sp, setSpeed] = useState<number | null>(0);
   const [steer_angle, setSteerAngle] = useState<number | null>(0);
   const steerAngleRef = useRef<number | null>(0);
+  const passableWidthRef = useRef<string>("0");
+  const passableLengthRef = useRef<string>("0");
   const gearRef = useRef<string | null>("N");
+  const steerforceRef = useRef<number | null>(0);
 
   // 状态来存储延迟
   const [latencyRTT, setLatencyRTT] = useState<number>(0);
@@ -99,6 +103,10 @@ const Car = ({ remotePeerId = "control-002" }) => {
           ctx,
           gearRef.current ?? "N"
         );
+
+        drawText(ctx, `${passableWidthRef.current}`, avmimageWidth / 2, 40);
+
+        drawText(ctx, `${passableLengthRef.current}`, avmimageWidth / 2, 100);
       }
     }
   };
@@ -454,6 +462,38 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
       });
 
+      //订阅可行驶宽度：/visualization/ll_text
+      const llTextListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/visualization/ll_text",
+        messageType: "visualization_msgs/Marker",
+      });
+
+      llTextListener.subscribe((message: any) => {
+        if (message) {
+          if (connRef.current && connRef.current.open) {
+            console.log("ll_text message.text", message.text);
+            passableWidthRef.current = message.text;
+          }
+        }
+      });
+
+      //订阅可行驶长度：/visualization/lon_text
+      const lonTextListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/visualization/lon_text",
+        messageType: "visualization_msgs/Marker",
+      });
+
+      lonTextListener.subscribe((message: any) => {
+        if (message) {
+          if (connRef.current && connRef.current.open) {
+            console.log("lon_text message.text", message.text);
+            passableLengthRef.current = message.text;
+          }
+        }
+      });
+
       //订阅steer_test话题
       const steer_testListener = new ROSLIB.Topic({
         ros: rosRef.current,
@@ -464,6 +504,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
       steer_testListener.subscribe((message: any) => {
         if (message) {
           console.log("steer_test", message.data);
+          steerforceRef.current = message.data;
         }
       });
 
@@ -476,8 +517,15 @@ const Car = ({ remotePeerId = "control-002" }) => {
       //测试
       const steerTopic = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: "/rock_can/test",
+        name: "/rock_can/steer_pub",
         messageType: "std_msgs/Float32",
+      });
+
+      // 发布方向盘角度话题 ff_targetff_target
+      const steerTopic_ff_target = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/ff_target",
+        messageType: "g29_force_feedback/ForceFeedback",
       });
 
       const speedTopic = new ROSLIB.Topic({
@@ -524,12 +572,27 @@ const Car = ({ remotePeerId = "control-002" }) => {
             steer_cmd: controlDataRef.current.rotation * -1,
           });
 
-          // steerTopic.publish(controlDataRef.current.rotation * -1); 测试
+          // // steerTopic.publish(controlDataRef.current.rotation * -1); 测试
           const steerDataMessage = new ROSLIB.Message({
-            data: controlDataRef.current.rotation * -1,
+            data: controlDataRef.current.rotation,
           });
 
           steerTopic.publish(steerDataMessage);
+
+          //测试方向盘角度力反馈
+          const steerDataMessage_ff_target = new ROSLIB.Message({
+            header: { stamp: { sec: 0, nanosec: 0 }, frame_id: "" },
+            angle: steerforceRef.current,
+            force: 0.2,
+            pid_mode: true,
+          });
+          console.log(
+            "steerforceRef.current",
+            steerforceRef.current,
+            steerDataMessage_ff_target
+          );
+
+          steerTopic_ff_target.publish(steerDataMessage_ff_target);
 
           controlTopic.publish(controlDataMessage);
 
