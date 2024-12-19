@@ -25,10 +25,9 @@ const Car = ({ remotePeerId = "control-002" }) => {
   const [feedback_sp, setSpeed] = useState<number | null>(0);
   const [steer_angle, setSteerAngle] = useState<number | null>(0);
   const steerAngleRef = useRef<number | null>(0);
-  const passableWidthRef = useRef<string>("0");
-  const passableLengthRef = useRef<string>("0");
+  const passableWidthRef = useRef<string>("width: 0");
+  const passableLengthRef = useRef<string>("length: 0");
   const gearRef = useRef<string | null>("N");
-  const steerforceRef = useRef<number | null>(0);
 
   // 状态来存储延迟
   const [latencyRTT, setLatencyRTT] = useState<number>(0);
@@ -56,6 +55,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
   const peerRef = useRef<Peer | null>(null);
 
   const [callStarted, setCallStarted] = useState(false);
+  const [assistive_mode, setAssistiveMode] = useState(false);
   const mediaConnectionRef = useRef<MediaConnection | null>(null);
   // UseRefs to store the latest images
   const avmImageRef = useRef<HTMLImageElement | null>(null);
@@ -193,6 +193,13 @@ const Car = ({ remotePeerId = "control-002" }) => {
               // Type assertion for the "fisheye" topic
               const fisheyeUrl = receivedData as string;
               setReceivedCamera(fisheyeUrl);
+              break;
+
+            // setAssistiveMode
+            case "assistive_mode":
+              // Type assertion for the "assistive_mode" topic
+              const assistiveMode = receivedData as boolean;
+              setAssistiveMode(assistiveMode);
               break;
 
             default:
@@ -494,38 +501,11 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
       });
 
-      //订阅steer_test话题
-      const steer_testListener = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/rock_can/steer_test",
-        messageType: "std_msgs/Float32",
-      });
-
-      steer_testListener.subscribe((message: any) => {
-        if (message) {
-          console.log("steer_test", message.data);
-          steerforceRef.current = message.data;
-        }
-      });
-
       // 发布控制话题
       const controlTopic = new ROSLIB.Topic({
         ros: rosRef.current,
         name: "/rock_can/steer_command",
         messageType: "cyber_msgs/steer_cmd",
-      });
-      //测试
-      const steerTopic = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/rock_can/steer_pub",
-        messageType: "std_msgs/Float32",
-      });
-
-      // 发布方向盘角度话题 ff_targetff_target
-      const steerTopic_ff_target = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/ff_target",
-        messageType: "g29_force_feedback/ForceFeedback",
       });
 
       const speedTopic = new ROSLIB.Topic({
@@ -571,28 +551,6 @@ const Car = ({ remotePeerId = "control-002" }) => {
             enable_auto_steer: true,
             steer_cmd: controlDataRef.current.rotation * -1,
           });
-
-          // // steerTopic.publish(controlDataRef.current.rotation * -1); 测试
-          const steerDataMessage = new ROSLIB.Message({
-            data: controlDataRef.current.rotation,
-          });
-
-          steerTopic.publish(steerDataMessage);
-
-          //测试方向盘角度力反馈
-          const steerDataMessage_ff_target = new ROSLIB.Message({
-            header: { stamp: { sec: 0, nanosec: 0 }, frame_id: "" },
-            angle: steerforceRef.current,
-            force: 0.2,
-            pid_mode: true,
-          });
-          console.log(
-            "steerforceRef.current",
-            steerforceRef.current,
-            steerDataMessage_ff_target
-          );
-
-          steerTopic_ff_target.publish(steerDataMessage_ff_target);
 
           controlTopic.publish(controlDataMessage);
 
@@ -690,6 +648,52 @@ const Car = ({ remotePeerId = "control-002" }) => {
     }
   }, [receivedCamera]);
 
+  useEffect(() => {
+    if (assistive_mode) {
+      // 发布开启辅助模式的消息
+      if (rosRef.current) {
+        const taskIdMessage = new ROSLIB.Message({
+          data: 0,
+        });
+
+        const taskIdTopic = new ROSLIB.Topic({
+          ros: rosRef.current,
+          name: "/planning/task_id",
+          messageType: "std_msgs/Int32",
+        });
+
+        taskIdTopic.publish(taskIdMessage);
+
+        const autoDriveMessage = new ROSLIB.Message({
+          data: true,
+        });
+
+        const autoDriveTopic = new ROSLIB.Topic({
+          ros: rosRef.current,
+          name: "/rock_can/auto_drive",
+          messageType: "std_msgs/Bool",
+        });
+
+        autoDriveTopic.publish(autoDriveMessage);
+      }
+    } else {
+      // 发布关闭辅助模式的消息
+      if (rosRef.current) {
+        const autoDriveMessage = new ROSLIB.Message({
+          data: false,
+        });
+
+        const autoDriveTopic = new ROSLIB.Topic({
+          ros: rosRef.current,
+          name: "/rock_can/auto_drive",
+          messageType: "std_msgs/Bool",
+        });
+
+        autoDriveTopic.publish(autoDriveMessage);
+      }
+    }
+  }, [assistive_mode]);
+
   // 发送 RTT 时延数据到 ROS
   const sendRTTSequence = (rttArray: number[]) => {
     if (rosRef.current && connected) {
@@ -732,6 +736,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
           <p>速度：{(((feedback_sp ?? 0) * 3.6) / 100).toFixed(2)} km/h</p>
           <p>摄像头：{receivedCamera}</p>
           <p>往返延迟：{`${latencyRTT * 1000} ms`}</p>
+          <p>辅助模式：{assistive_mode ? "开" : "关"}</p>
         </CardContent>
       </Card>
     </div>

@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Car3D from "./components/Car3D";
 import { pointMarker } from "@/lib/simplifyMarkers";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -329,6 +331,12 @@ const ControlEnd = () => {
     }
   };
 
+  const switchChange = (checked: boolean) => {
+    if (connRef.current) {
+      connRef.current.send({ topic: "assistive_mode", data: checked });
+    }
+  };
+
   return (
     <div className="w-full min-[2460px]:w-5/6 flex flex-col gap-3 p-3 my-auto">
       <div className="flex flex-row gap-2 w-full">
@@ -380,6 +388,10 @@ const ControlEnd = () => {
                 重新连接
               </Button>
             )} */}
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="Assistive-mode">辅助模式</Label>
+                <Switch id="Assistive-mode" onCheckedChange={switchChange} />
+              </div>
             </div>
             <Select onValueChange={switchTopic}>
               <SelectTrigger className="w-[180px]">
