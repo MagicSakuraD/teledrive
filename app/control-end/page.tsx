@@ -66,14 +66,10 @@ const ControlEnd = () => {
   const [boundary, setBoundary] = useState<any>(null);
 
   const [obstacles, setObstacles] = useState<any>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const secondCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
   // 状态来存储延迟和丢包率
   const [latency, setLatency] = useState<number>(0);
   // const [packetLoss, setPacketLoss] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const peer = new Peer("control-002", {
@@ -127,6 +123,8 @@ const ControlEnd = () => {
         console.error("Call error:", err);
       });
     });
+
+    let animationFrameId: number;
 
     peer.on("connection", (conn) => {
       connRef.current = conn;
@@ -203,10 +201,15 @@ const ControlEnd = () => {
         }
       });
 
+      const monitorStats = () => {
+        startStatsMonitoring(connRef.current!);
+        animationFrameId = requestAnimationFrame(monitorStats);
+      };
+
       conn.on("open", () => {
         console.log("连接成功");
+        monitorStats();
         setConnected(true);
-        startStatsMonitoring(conn);
       });
 
       conn.on("close", () => {
@@ -221,50 +224,57 @@ const ControlEnd = () => {
 
     return () => {
       if (peer) {
-        stopStatsMonitoring();
-
+        cancelAnimationFrame(animationFrameId);
         peer.destroy();
       }
     };
   }, [connected]);
 
+  // useEffect(() => {
+  //   let animationFrameId: number;
+
+  //   const updateCanvas = () => {
+  //     if (canvasRef.current && secondCanvasRef.current) {
+  //       // 这里是处理绘图更新或其他每帧逻辑的地方
+  //     }
+  //     animationFrameId = requestAnimationFrame(updateCanvas);
+  //   };
+
+  //   // 启动动画循环
+  //   animationFrameId = requestAnimationFrame(updateCanvas);
+
+  //   return () => cancelAnimationFrame(animationFrameId);
+  // }, []);
+
+  // useEffect(() => {
+  //   let animationFrameId: number;
+  //   const sendControlData = () => {
+  //     if (connRef.current && connRef.current.open) {
+  //       const controlData = {
+  //         axes,
+  //         currentGear,
+  //       };
+
+  //       connRef.current.send({ topic: "axes", data: controlData });
+  //     }
+
+  //     // 递归调用 requestAnimationFrame 以实现循环发送
+  //     animationFrameId = requestAnimationFrame(sendControlData);
+  //   };
+
+  //   return () => cancelAnimationFrame(animationFrameId);
+  // }, [axes, currentGear]);
+
   useEffect(() => {
-    let animationFrameId: number;
+    if (connRef.current && connRef.current.open) {
+      const controlData = {
+        axes,
+        currentGear,
+      };
 
-    const updateCanvas = () => {
-      if (canvasRef.current && secondCanvasRef.current) {
-        // 这里是处理绘图更新或其他每帧逻辑的地方
-      }
-      animationFrameId = requestAnimationFrame(updateCanvas);
-    };
-
-    // 启动动画循环
-    animationFrameId = requestAnimationFrame(updateCanvas);
-
-    return () => cancelAnimationFrame(animationFrameId);
-  }, []);
-
-  useEffect(() => {
-    let animationFrameId: number;
-    const sendControlData = () => {
-      if (connRef.current && connRef.current.open) {
-        const controlData = {
-          axes,
-          currentGear,
-        };
-
-        connRef.current.send({ topic: "axes", data: controlData });
-      }
-
-      // 递归调用 requestAnimationFrame 以实现循环发送
-      animationFrameId = requestAnimationFrame(sendControlData);
-    };
-
-    // 启动循环发送
-    animationFrameId = requestAnimationFrame(sendControlData);
-
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [axes, currentGear]);
+      connRef.current.send({ topic: "axes", data: controlData });
+    }
+  }, [axes, currentGear]); // 依赖数组中监听 axes 和 currentGear 的变化
 
   useEffect(() => {
     if (!connected) {
@@ -309,26 +319,18 @@ const ControlEnd = () => {
     }
   };
 
-  const startStatsMonitoring = (conn: DataConnection) => {
+  const startStatsMonitoring = async (conn: DataConnection) => {
     const peerConnection = conn.peerConnection as RTCPeerConnection;
-    if (peerConnection) {
-      intervalRef.current = setInterval(async () => {
-        const stats = await peerConnection.getStats();
-        stats.forEach((report) => {
-          if (report.type === "candidate-pair") {
-            setLatency(report.currentRoundTripTime);
-          }
-        });
-      }, 1000); // 每秒更新一次
-    }
-  };
-
-  const stopStatsMonitoring = () => {
-    console.log("停止监控");
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+    const stats = await peerConnection.getStats();
+    stats.forEach((report) => {
+      if (report.type === "candidate-pair") {
+        const rtt_ms = report.currentRoundTripTime;
+        if (rtt_ms !== undefined) {
+          setLatency(rtt_ms);
+          console.log("延迟:", rtt_ms);
+        }
+      }
+    });
   };
 
   const switchChange = (checked: boolean) => {
@@ -357,11 +359,7 @@ const ControlEnd = () => {
         {/* video */}
         <Card className="overflow-hidden grow">
           <div className="relative">
-            <video
-              ref={videoRef}
-              className="w-full h-auto aspect-[25/9]"
-              controls
-            />
+            <video ref={videoRef} className="w-full h-auto aspect-[25/9]" />
             <Badge
               variant={"outline"}
               className="absolute border-none top-0 right-0 flex flex-row gap-1 items-center text-green-600 z-10"

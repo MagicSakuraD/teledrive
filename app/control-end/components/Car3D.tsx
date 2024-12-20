@@ -50,7 +50,6 @@ const Car3D: React.FC<Car3DProps> = ({
   boundary,
   normalRoad,
 }) => {
-  console.log(trajectory, "trajectory");
   const textObstacles: Marker[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: Marker) => obstacle.type === 9)
     : [];

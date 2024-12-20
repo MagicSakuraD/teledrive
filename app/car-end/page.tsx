@@ -242,14 +242,12 @@ const Car = ({ remotePeerId = "control-002" }) => {
       rosRef.current = ros;
     }
 
-    if (connected) {
+    if (connected && rosRef.current) {
       // 订阅合成视角相机话题
-      if (!rosRef.current || !canvasRef.current) return;
+      if (!canvasRef.current) return;
 
       const ctx = canvasRef.current.getContext("2d");
       const videoStream = canvasRef.current.captureStream();
-
-      let animationFrameId: number;
 
       if (!callStarted && peerRef.current && peerRef.current.open) {
         const call = peerRef.current.call(remotePeerId, videoStream);
@@ -495,106 +493,41 @@ const Car = ({ remotePeerId = "control-002" }) => {
       lonTextListener.subscribe((message: any) => {
         if (message) {
           if (connRef.current && connRef.current.open) {
-            console.log("lon_text message.text", message.text);
             passableLengthRef.current = message.text;
           }
         }
       });
 
-      // 发布控制话题
-      const controlTopic = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/rock_can/steer_command",
-        messageType: "cyber_msgs/steer_cmd",
-      });
+      const peerConnection = connRef.current!
+        .peerConnection as RTCPeerConnection;
 
-      const speedTopic = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/rock_can/speed_command",
-        messageType: "cyber_msgs/speed_cmd",
-      });
+      const collectRTT = async () => {
+        const stats = await peerConnection.getStats();
+        stats.forEach((report) => {
+          if (report.type === "candidate-pair") {
+            const rtt = report.currentRoundTripTime;
+            if (rtt !== undefined) {
+              setLatencyRTT(rtt);
+              rttArray.push(rtt); // 添加 RTT 值到数组中
 
-      const brakeTopic = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/rock_can/brake_command",
-        messageType: "cyber_msgs/brake_cmd",
-      });
-
-      const sendControlData = () => {
-        if (rosRef.current && connected && connRef.current) {
-          const peerConnection = connRef.current
-            .peerConnection as RTCPeerConnection;
-
-          const collectRTT = async () => {
-            const stats = await peerConnection.getStats();
-            stats.forEach((report) => {
-              if (report.type === "candidate-pair") {
-                const rtt = report.currentRoundTripTime;
-                if (rtt !== undefined) {
-                  setLatencyRTT(rtt);
-                  rttArray.push(rtt); // 添加 RTT 值到数组中
-
-                  if (rttArray.length >= maxRTTArrayLength) {
-                    // 如果 RTT 数组长度达到设定值，发送并重置
-                    sendRTTSequence(rttArray);
-                    rttArray = []; // 重置数组
-                  }
-                }
+              if (rttArray.length >= maxRTTArrayLength) {
+                // 如果 RTT 数组长度达到设定值，发送并重置
+                sendRTTSequence(rttArray);
+                rttArray = []; // 重置数组
               }
-            });
-          };
-
-          collectRTT(); // 初始调用
-
-          const controlDataMessage = new ROSLIB.Message({
-            is_updated: true,
-            enable_auto_steer: true,
-            steer_cmd: controlDataRef.current.rotation * -1,
-          });
-
-          controlTopic.publish(controlDataMessage);
-
-          let gear_num: number = 0;
-          switch (controlDataRef.current.gear) {
-            case "D":
-              gear_num = 1;
-              break;
-            case "R":
-              gear_num = 2;
-              break;
-            case "N":
-              gear_num = -1;
-              break;
-            case "p":
-              gear_num = -2;
-              break;
-            default:
-              gear_num = -2;
-              break;
+            }
           }
-
-          const speedDataMessage = new ROSLIB.Message({
-            is_updated: true,
-            enable_auto_speed: true,
-            speed_cmd: controlDataRef.current.throttle * 1000,
-            acc_cmd: 0,
-            gear: gear_num,
-          });
-
-          speedTopic.publish(speedDataMessage);
-
-          const brakeDataMessage = new ROSLIB.Message({
-            enable_auto_brake: true,
-            deceleration: controlDataRef.current.brake * -5,
-          });
-
-          brakeTopic.publish(brakeDataMessage);
-        }
-
-        animationFrameId = requestAnimationFrame(sendControlData);
+        });
       };
 
-      sendControlData();
+      collectRTT(); // 每帧调用
+
+      let animationRTTId: number;
+
+      const requestAnimationRTT = () => {
+        collectRTT();
+        animationRTTId = requestAnimationFrame(requestAnimationRTT);
+      };
 
       return () => {
         imageListener.unsubscribe();
@@ -604,23 +537,19 @@ const Car = ({ remotePeerId = "control-002" }) => {
           mediaConnectionRef.current = null;
         }
         feedbackListener.unsubscribe();
-        controlTopic.unsubscribe();
-        speedTopic.unsubscribe();
-        brakeTopic.unsubscribe();
         steerListener.unsubscribe();
         obstaclesListener.unsubscribe();
         localizationListener.unsubscribe();
         // trajListener.unsubscribe();
         bestTrajListener.unsubscribe();
         referenceCentralLinesListener.unsubscribe();
-        cancelAnimationFrame(animationFrameId);
+        cancelAnimationFrame(animationRTTId);
       };
     }
   }, [connected]);
 
   useEffect(() => {
     if (rosRef.current) {
-      // 初始化或获取控制 topic
       //切换视角
       if (imageListenerRef.current) {
         imageListenerRef.current.unsubscribe();
@@ -649,7 +578,9 @@ const Car = ({ remotePeerId = "control-002" }) => {
   }, [receivedCamera]);
 
   useEffect(() => {
-    if (assistive_mode) {
+    let animationFrameId: number;
+
+    if (rosRef.current && assistive_mode) {
       // 发布开启辅助模式的消息
       if (rosRef.current) {
         const taskIdMessage = new ROSLIB.Message({
@@ -664,6 +595,18 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
         taskIdTopic.publish(taskIdMessage);
 
+        const startUpModeMessage = new ROSLIB.Message({
+          data: 1,
+        });
+
+        const startUpModeTopic = new ROSLIB.Topic({
+          ros: rosRef.current,
+          name: "/planning/start_up_mode",
+          messageType: "std_msgs/Int32",
+        });
+
+        startUpModeTopic.publish(startUpModeMessage);
+
         const autoDriveMessage = new ROSLIB.Message({
           data: true,
         });
@@ -677,8 +620,8 @@ const Car = ({ remotePeerId = "control-002" }) => {
         autoDriveTopic.publish(autoDriveMessage);
       }
     } else {
-      // 发布关闭辅助模式的消息
       if (rosRef.current) {
+        // 发布关闭辅助模式的消息
         const autoDriveMessage = new ROSLIB.Message({
           data: false,
         });
@@ -690,9 +633,94 @@ const Car = ({ remotePeerId = "control-002" }) => {
         });
 
         autoDriveTopic.publish(autoDriveMessage);
+
+        // 发布控制话题
+        const controlTopic = new ROSLIB.Topic({
+          ros: rosRef.current,
+          name: "/rock_can/steer_command",
+          messageType: "cyber_msgs/steer_cmd",
+        });
+
+        const speedTopic = new ROSLIB.Topic({
+          ros: rosRef.current,
+          name: "/rock_can/speed_command",
+          messageType: "cyber_msgs/speed_cmd",
+        });
+
+        const brakeTopic = new ROSLIB.Topic({
+          ros: rosRef.current,
+          name: "/rock_can/brake_command",
+          messageType: "cyber_msgs/brake_cmd",
+        });
+
+        const sendControlData = () => {
+          if (
+            rosRef.current &&
+            connected &&
+            connRef.current &&
+            !assistive_mode
+          ) {
+            const controlDataMessage = new ROSLIB.Message({
+              is_updated: true,
+              enable_auto_steer: true,
+              steer_cmd: controlDataRef.current.rotation * -1,
+            });
+
+            controlTopic.publish(controlDataMessage);
+
+            let gear_num: number = 0;
+            switch (controlDataRef.current.gear) {
+              case "D":
+                gear_num = 1;
+                break;
+              case "R":
+                gear_num = 2;
+                break;
+              case "N":
+                gear_num = -1;
+                break;
+              case "p":
+                gear_num = -2;
+                break;
+              default:
+                gear_num = -2;
+                break;
+            }
+
+            const speedDataMessage = new ROSLIB.Message({
+              is_updated: true,
+              enable_auto_speed: true,
+              speed_cmd: controlDataRef.current.throttle * 1000,
+              acc_cmd: 0,
+              gear: gear_num,
+            });
+
+            speedTopic.publish(speedDataMessage);
+            console.log("speedDataMessage 发布话题", speedDataMessage);
+
+            const brakeDataMessage = new ROSLIB.Message({
+              enable_auto_brake: true,
+              deceleration: controlDataRef.current.brake * -5,
+            });
+
+            brakeTopic.publish(brakeDataMessage);
+          }
+        };
+
+        const requestAnimationFun = () => {
+          console.log("辅助模式关闭,发布控制话题");
+          sendControlData();
+
+          animationFrameId = requestAnimationFrame(requestAnimationFun);
+        };
+
+        requestAnimationFun();
       }
     }
-  }, [assistive_mode]);
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [assistive_mode, connected]);
 
   // 发送 RTT 时延数据到 ROS
   const sendRTTSequence = (rttArray: number[]) => {
