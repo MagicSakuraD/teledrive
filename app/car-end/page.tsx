@@ -549,177 +549,139 @@ const Car = ({ remotePeerId = "control-002" }) => {
   }, [connected]);
 
   useEffect(() => {
-    if (rosRef.current) {
-      //切换视角
-      if (imageListenerRef.current) {
-        imageListenerRef.current.unsubscribe();
-      }
+    if (!rosRef.current) return; // 如果 rosRef.current 不存在，直接返回
 
-      imageListenerRef.current = new ROSLIB.Topic({
+    if (assistive_mode) {
+      // 发布开启辅助模式的消息
+      const taskIdMessage = new ROSLIB.Message({
+        data: 0,
+      });
+
+      const taskIdTopic = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: receivedCamera,
-        messageType: "sensor_msgs/CompressedImage",
+        name: "/planning/task_id",
+        messageType: "std_msgs/Int32",
       });
 
-      imageListenerRef.current.subscribe((message: any) => {
-        const receivedImage = new Image();
-        receivedImage.src = `data:image/jpeg;base64,${message.data}`;
+      taskIdTopic.publish(taskIdMessage);
 
-        receivedImage.onload = () => {
-          receivedImageRef.current = receivedImage;
-        };
+      const startUpModeMessage = new ROSLIB.Message({
+        data: 1,
       });
-      return () => {
-        if (imageListenerRef.current) {
-          imageListenerRef.current.unsubscribe();
+
+      const startUpModeTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/planning/start_up_mode",
+        messageType: "std_msgs/Int32",
+      });
+
+      startUpModeTopic.publish(startUpModeMessage);
+
+      const autoDriveMessage = new ROSLIB.Message({
+        data: true,
+      });
+
+      const autoDriveTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/auto_drive",
+        messageType: "std_msgs/Bool",
+      });
+
+      autoDriveTopic.publish(autoDriveMessage);
+    } else {
+      // 发布关闭辅助模式的消息
+      const autoDriveMessage = new ROSLIB.Message({
+        data: false,
+      });
+
+      const autoDriveTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/auto_drive",
+        messageType: "std_msgs/Bool",
+      });
+
+      autoDriveTopic.publish(autoDriveMessage);
+
+      // 发布控制话题
+      const controlTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/steer_command",
+        messageType: "cyber_msgs/steer_cmd",
+      });
+
+      const speedTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/speed_command",
+        messageType: "cyber_msgs/speed_cmd",
+      });
+
+      const brakeTopic = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/rock_can/brake_command",
+        messageType: "cyber_msgs/brake_cmd",
+      });
+
+      const sendControlData = () => {
+        if (connected && connRef.current && !assistive_mode) {
+          const controlDataMessage = new ROSLIB.Message({
+            is_updated: true,
+            enable_auto_steer: true,
+            steer_cmd: controlDataRef.current.rotation * -1,
+          });
+
+          controlTopic.publish(controlDataMessage);
+
+          let gear_num: number = 0;
+          switch (controlDataRef.current.gear) {
+            case "D":
+              gear_num = 1;
+              break;
+            case "R":
+              gear_num = 2;
+              break;
+            case "N":
+              gear_num = -1;
+              break;
+            case "p":
+              gear_num = -2;
+              break;
+            default:
+              gear_num = -2;
+              break;
+          }
+
+          const speedDataMessage = new ROSLIB.Message({
+            is_updated: true,
+            enable_auto_speed: true,
+            speed_cmd: controlDataRef.current.throttle * 1000,
+            acc_cmd: 0,
+            gear: gear_num,
+          });
+
+          speedTopic.publish(speedDataMessage);
+          console.log("speedDataMessage 发布话题", speedDataMessage);
+
+          const brakeDataMessage = new ROSLIB.Message({
+            enable_auto_brake: true,
+            deceleration: controlDataRef.current.brake * -5,
+          });
+
+          brakeTopic.publish(brakeDataMessage);
         }
       };
+
+      const requestAnimationFun = () => {
+        sendControlData();
+        animationFrameId = requestAnimationFrame(requestAnimationFun);
+      };
+
+      let animationFrameId: number;
+      requestAnimationFun();
+
+      return () => {
+        cancelAnimationFrame(animationFrameId);
+      };
     }
-  }, [receivedCamera]);
-
-  useEffect(() => {
-    let animationFrameId: number;
-
-    if (rosRef.current && assistive_mode) {
-      // 发布开启辅助模式的消息
-      if (rosRef.current) {
-        const taskIdMessage = new ROSLIB.Message({
-          data: 0,
-        });
-
-        const taskIdTopic = new ROSLIB.Topic({
-          ros: rosRef.current,
-          name: "/planning/task_id",
-          messageType: "std_msgs/Int32",
-        });
-
-        taskIdTopic.publish(taskIdMessage);
-
-        const startUpModeMessage = new ROSLIB.Message({
-          data: 1,
-        });
-
-        const startUpModeTopic = new ROSLIB.Topic({
-          ros: rosRef.current,
-          name: "/planning/start_up_mode",
-          messageType: "std_msgs/Int32",
-        });
-
-        startUpModeTopic.publish(startUpModeMessage);
-
-        const autoDriveMessage = new ROSLIB.Message({
-          data: true,
-        });
-
-        const autoDriveTopic = new ROSLIB.Topic({
-          ros: rosRef.current,
-          name: "/rock_can/auto_drive",
-          messageType: "std_msgs/Bool",
-        });
-
-        autoDriveTopic.publish(autoDriveMessage);
-      }
-    } else {
-      if (rosRef.current) {
-        // 发布关闭辅助模式的消息
-        const autoDriveMessage = new ROSLIB.Message({
-          data: false,
-        });
-
-        const autoDriveTopic = new ROSLIB.Topic({
-          ros: rosRef.current,
-          name: "/rock_can/auto_drive",
-          messageType: "std_msgs/Bool",
-        });
-
-        autoDriveTopic.publish(autoDriveMessage);
-
-        // 发布控制话题
-        const controlTopic = new ROSLIB.Topic({
-          ros: rosRef.current,
-          name: "/rock_can/steer_command",
-          messageType: "cyber_msgs/steer_cmd",
-        });
-
-        const speedTopic = new ROSLIB.Topic({
-          ros: rosRef.current,
-          name: "/rock_can/speed_command",
-          messageType: "cyber_msgs/speed_cmd",
-        });
-
-        const brakeTopic = new ROSLIB.Topic({
-          ros: rosRef.current,
-          name: "/rock_can/brake_command",
-          messageType: "cyber_msgs/brake_cmd",
-        });
-
-        const sendControlData = () => {
-          if (
-            rosRef.current &&
-            connected &&
-            connRef.current &&
-            !assistive_mode
-          ) {
-            const controlDataMessage = new ROSLIB.Message({
-              is_updated: true,
-              enable_auto_steer: true,
-              steer_cmd: controlDataRef.current.rotation * -1,
-            });
-
-            controlTopic.publish(controlDataMessage);
-
-            let gear_num: number = 0;
-            switch (controlDataRef.current.gear) {
-              case "D":
-                gear_num = 1;
-                break;
-              case "R":
-                gear_num = 2;
-                break;
-              case "N":
-                gear_num = -1;
-                break;
-              case "p":
-                gear_num = -2;
-                break;
-              default:
-                gear_num = -2;
-                break;
-            }
-
-            const speedDataMessage = new ROSLIB.Message({
-              is_updated: true,
-              enable_auto_speed: true,
-              speed_cmd: controlDataRef.current.throttle * 1000,
-              acc_cmd: 0,
-              gear: gear_num,
-            });
-
-            speedTopic.publish(speedDataMessage);
-            console.log("speedDataMessage 发布话题", speedDataMessage);
-
-            const brakeDataMessage = new ROSLIB.Message({
-              enable_auto_brake: true,
-              deceleration: controlDataRef.current.brake * -5,
-            });
-
-            brakeTopic.publish(brakeDataMessage);
-          }
-        };
-
-        const requestAnimationFun = () => {
-          console.log("辅助模式关闭,发布控制话题");
-          sendControlData();
-
-          animationFrameId = requestAnimationFrame(requestAnimationFun);
-        };
-
-        requestAnimationFun();
-      }
-    }
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
   }, [assistive_mode, connected]);
 
   // 发送 RTT 时延数据到 ROS
