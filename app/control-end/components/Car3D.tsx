@@ -21,6 +21,8 @@ import { WalkModel } from "./models/walk";
 import { ArrowModel } from "./models/arrow";
 import Polygon from "./models/polygon";
 import Lanes from "./models/lane";
+import PolygonPath from "./models/polygonPath";
+import { polygonPathType } from "./models/polygonPath";
 
 export type trajType = {
   id: string;
@@ -40,6 +42,7 @@ interface Car3DProps {
   centralLines: trajType[];
   boundary: trajType[];
   normalRoad: Marker[];
+  ploygonPath: polygonPathType[];
 }
 
 const Car3D: React.FC<Car3DProps> = ({
@@ -49,6 +52,7 @@ const Car3D: React.FC<Car3DProps> = ({
   centralLines,
   boundary,
   normalRoad,
+  ploygonPath,
 }) => {
   const textObstacles: Marker[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: Marker) => obstacle.type === 9)
@@ -121,6 +125,9 @@ const Car3D: React.FC<Car3DProps> = ({
       )}
 
       <Polygon markers={polygonObstacles} localization={localization} />
+      {ploygonPath && (
+        <PolygonPath paths={ploygonPath} localization={localization} />
+      )}
 
       {normalRoad && normalRoad.length > 2 && (
         <Lanes roads={normalRoad} localization={localization} />

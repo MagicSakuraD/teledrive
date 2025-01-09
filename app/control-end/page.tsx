@@ -64,6 +64,7 @@ const ControlEnd = () => {
   const [localization, setLocalization] = useState<pointMarker | null>(null);
   const [centralLines, setCentralLines] = useState<any>(null);
   const [boundary, setBoundary] = useState<any>(null);
+  const [ploygonPath, setPolygonPath] = useState<any>(null);
 
   const [obstacles, setObstacles] = useState<any>(null);
   // 状态来存储延迟和丢包率
@@ -182,6 +183,12 @@ const ControlEnd = () => {
               // 如果接收到的是路径边界信息
               // console.log("路径边界信息", receivedData);
               setBoundary(receivedData); // 你可以将接收到的路径边界信息更新到状态中
+              break;
+
+            case "polygon_path":
+              // 如果接收到的是多边形路径信息
+              // console.log("多边形路径信息", receivedData);
+              setPolygonPath(receivedData); // 你可以将接收到的多边形路径信息更新到状态中
               break;
 
             case "road":
@@ -352,6 +359,7 @@ const ControlEnd = () => {
               centralLines={centralLines}
               boundary={boundary}
               normalRoad={normalRoad}
+              ploygonPath={ploygonPath}
             />
           )}
         </Card>

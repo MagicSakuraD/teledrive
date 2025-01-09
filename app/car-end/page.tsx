@@ -13,6 +13,7 @@ import {
   simplifyMarkers_boundary,
   simplifyRoads,
   bestTrajectory,
+  simplifyPolygon_path,
 } from "@/lib/simplifyMarkers";
 
 const Car = ({ remotePeerId = "control-002" }) => {
@@ -46,6 +47,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
     throttle: 0,
     gear: "N",
   });
+
   const [receivedCamera, setReceivedCamera] = useState<string>(
     "/driver/fisheye/front/compressed"
   );
@@ -444,6 +446,24 @@ const Car = ({ remotePeerId = "control-002" }) => {
             connRef.current.send({
               topic: "CentralLines",
               data: simplifyMarkers_tarj(message.markers),
+            });
+          }
+        }
+      });
+
+      //订阅话题polygon_path消息类型visualization_msgs/MarkerArray
+      const polygonPathListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/polygon_path",
+        messageType: "visualization_msgs/MarkerArray",
+      });
+
+      polygonPathListener.subscribe((message: any) => {
+        if (message) {
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "polygon_path",
+              data: simplifyPolygon_path(message.markers),
             });
           }
         }

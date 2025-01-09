@@ -1,5 +1,3 @@
-import { Color } from "three";
-
 export interface Marker {
   id?: string;
   pose?: {
@@ -92,6 +90,18 @@ export function simplifyRoads(roads: Marker[]) {
       z: point.y,
     })),
     Color: road.color,
+  }));
+}
+
+export function simplifyPolygon_path(polygon: Marker[]) {
+  return polygon.map((polygon) => ({
+    id: polygon.id,
+    color: polygon.color,
+    points: polygon.points!.map((point) => ({
+      x: -point.x,
+      y: point.z,
+      z: point.y,
+    })),
   }));
 }
 
