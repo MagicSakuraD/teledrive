@@ -106,9 +106,9 @@ const Car = ({ remotePeerId = "control-002" }) => {
           gearRef.current ?? "N"
         );
 
-        drawText(ctx, `${passableWidthRef.current}`, avmimageWidth / 2, 40);
+        // drawText(ctx, `${passableWidthRef.current}`, avmimageWidth / 2, 40);
 
-        drawText(ctx, `${passableLengthRef.current}`, avmimageWidth / 2, 100);
+        // drawText(ctx, `${passableLengthRef.current}`, avmimageWidth / 2, 100);
       }
     }
   };
@@ -276,7 +276,6 @@ const Car = ({ remotePeerId = "control-002" }) => {
       imageListener.subscribe((message: any) => {
         const avmImage = new Image();
         avmImage.src = `data:image/jpeg;base64,${message.data}`;
-
         avmImage.onload = () => {
           avmImageRef.current = avmImage;
           drawImagesOnCanvas(ctx);
@@ -497,7 +496,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
       llTextListener.subscribe((message: any) => {
         if (message) {
           if (connRef.current && connRef.current.open) {
-            console.log("ll_text message.text", message.text);
+            // console.log("ll_text message.text", message.text);
             passableWidthRef.current = message.text;
           }
         }
@@ -567,6 +566,35 @@ const Car = ({ remotePeerId = "control-002" }) => {
       };
     }
   }, [connected]);
+
+  //鱼眼相机话题
+  useEffect(() => {
+    if (rosRef.current) {
+      //切换视角
+      if (imageListenerRef.current) {
+        imageListenerRef.current.unsubscribe();
+      }
+
+      imageListenerRef.current = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: receivedCamera,
+        messageType: "sensor_msgs/CompressedImage",
+      });
+
+      imageListenerRef.current.subscribe((message: any) => {
+        const receivedImage = new Image();
+        receivedImage.src = `data:image/jpeg;base64,${message.data}`;
+        receivedImage.onload = () => {
+          receivedImageRef.current = receivedImage;
+        };
+      });
+      return () => {
+        if (imageListenerRef.current) {
+          imageListenerRef.current.unsubscribe();
+        }
+      };
+    }
+  }, [receivedCamera]);
 
   useEffect(() => {
     if (!rosRef.current) return; // 如果 rosRef.current 不存在，直接返回
@@ -679,7 +707,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
           });
 
           speedTopic.publish(speedDataMessage);
-          console.log("speedDataMessage 发布话题", speedDataMessage);
+          // console.log("speedDataMessage 发布话题", speedDataMessage);
 
           const brakeDataMessage = new ROSLIB.Message({
             enable_auto_brake: true,

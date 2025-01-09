@@ -14,7 +14,7 @@ function drawArc(
     centerX + Math.cos(endAngle) * radius,
     centerY + Math.sin(endAngle) * radius
   );
-
+  console.log("ok");
   // Define gradient stops
   gradient.addColorStop(0, "rgba(250, 245, 255, 0)"); // Start thin
   gradient.addColorStop(0.4, "rgba(250, 245, 255, 1)"); // Middle thick
