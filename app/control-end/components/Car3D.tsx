@@ -97,7 +97,7 @@ const Car3D: React.FC<Car3DProps> = ({
         scale={[1, 1, 1]}
       />
 
-      {textObstacles.map(
+      {/* {textObstacles.map(
         (obstacle: Marker, index: number) =>
           obstacle && (
             <Text3D
@@ -122,7 +122,7 @@ const Car3D: React.FC<Car3DProps> = ({
               {obstacle.text?.toLocaleLowerCase()}
             </Text3D>
           )
-      )}
+      )} */}
 
       <Polygon markers={polygonObstacles} localization={localization} />
       {ploygonPath && (

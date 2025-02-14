@@ -235,7 +235,7 @@ const ControlEnd = () => {
         peer.destroy();
       }
     };
-  }, [connected]);
+  }, []);
 
   // useEffect(() => {
   //   let animationFrameId: number;
@@ -312,7 +312,7 @@ const ControlEnd = () => {
         console.log("尝试连接", remotePeerId);
       }
     }
-  }, [remotePeerId, connected]);
+  }, [remotePeerId]);
 
   const switchTopic = (newTopic: string) => {
     if (connRef.current) {

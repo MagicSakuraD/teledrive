@@ -56,7 +56,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const peerRef = useRef<Peer | null>(null);
 
-  const [callStarted, setCallStarted] = useState(false);
+  // const [callStarted, setCallStarted] = useState(false);
   const [assistive_mode, setAssistiveMode] = useState(false);
   const mediaConnectionRef = useRef<MediaConnection | null>(null);
   // UseRefs to store the latest images
@@ -252,19 +252,21 @@ const Car = ({ remotePeerId = "control-002" }) => {
       const ctx = canvasRef.current.getContext("2d");
       const videoStream = canvasRef.current.captureStream();
 
-      if (!callStarted && peerRef.current && peerRef.current.open) {
+      if (peerRef.current && peerRef.current.open) {
         const call = peerRef.current.call(remotePeerId, videoStream);
         mediaConnectionRef.current = call;
-        setCallStarted(true);
+        // setCallStarted(true);
 
         call.on("close", () => {
           console.log("Call closed");
-          setCallStarted(false);
+          setConnected(false);
+          // setCallStarted(false);
         });
 
         call.on("error", (err) => {
           console.error("Call error:", err);
-          setCallStarted(false);
+          setConnected(false);
+          // setCallStarted(false);
         });
       }
 
@@ -544,7 +546,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
       const requestAnimationRTT = () => {
         collectRTT();
-        console.log("RTT 延迟:", latencyRTT);
+        // console.log("RTT 延迟:", latencyRTT);
         animationRTTId = requestAnimationFrame(requestAnimationRTT);
       };
 
@@ -690,13 +692,13 @@ const Car = ({ remotePeerId = "control-002" }) => {
               gear_num = 2;
               break;
             case "N":
-              gear_num = -1;
+              gear_num = 3;
               break;
             case "p":
-              gear_num = -2;
+              gear_num = 4;
               break;
             default:
-              gear_num = -2;
+              gear_num = 3;
               break;
           }
 
