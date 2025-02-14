@@ -150,6 +150,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
         serialization: "binary",
         reliable: false,
       });
+
       connRef.current = conn;
       conn.on("open", () => {
         console.log("成功连接到控制端.");
@@ -539,14 +540,15 @@ const Car = ({ remotePeerId = "control-002" }) => {
         });
       };
 
-      collectRTT(); // 每帧调用
-
       let animationRTTId: number;
 
       const requestAnimationRTT = () => {
         collectRTT();
+        console.log("RTT 延迟:", latencyRTT);
         animationRTTId = requestAnimationFrame(requestAnimationRTT);
       };
+
+      requestAnimationRTT();
 
       return () => {
         imageListener.unsubscribe();
