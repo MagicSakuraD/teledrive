@@ -114,6 +114,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
   };
 
   useEffect(() => {
+    // 创建 Peer 实例
     const peer = new Peer("car-002", {
       host: "cyberc3-cloud-server.sjtu.edu.cn",
       port: 443,
@@ -122,15 +123,17 @@ const Car = ({ remotePeerId = "control-002" }) => {
       debug: 2,
       config: {
         iceServers: [
+          // { urls: "turn:0.peerjs.com:3478" },
+          // { urls: "stun:stun.l.google.com:19302" },
+          // {
+          //   urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
+          //   username: "test",
+          //   credential: "123456",
+          // },
           {
             urls: "turn:asia-east.relay.metered.ca:80",
             username: "c0f6e9eca6e8a8dd3ee14525",
             credential: "Yr/JEAAWgXYEg4AW",
-          },
-          {
-            urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
-            username: "test",
-            credential: "123456",
           },
         ],
       },
@@ -140,93 +143,117 @@ const Car = ({ remotePeerId = "control-002" }) => {
       peerRef.current = peer;
     }
 
+    // assign peer ID
     peer.on("open", (id) => {
       setPeerId(id);
       console.log(`车端 peer ID: ${id}`);
-      // 尝试连接到远程 peer
-      const conn = peer.connect(remotePeerId, {
-        label: "car-connection",
-        metadata: { role: "car" },
-        serialization: "binary",
-        reliable: false,
-      });
 
-      connRef.current = conn;
-      conn.on("open", () => {
-        console.log("成功连接到控制端.");
-        setConnected(true);
-      });
+      //Receive connection,只监听，不主动连接
+      peer.on("connection", (conn) => {
+        console.log("车端连接到控制端:", conn.peer);
 
-      conn.on("data", (data) => {
-        try {
-          const { topic, data: receivedData } = data as {
-            topic: string;
-            data: any;
-          };
-
-          switch (topic) {
-            case "axes":
-              // Type assertion for the "axes" topic
-              const { axes, currentGear } = receivedData as {
-                axes: {
-                  rotation: number;
-                  brake: number;
-                  throttle: number;
-                };
-                currentGear: string;
+        connRef.current = conn;
+        conn.on("open", () => {
+          console.log("成功连接到控制端.");
+          setConnected(true);
+          // 监听控制端发送的数据
+          conn.on("data", (data) => {
+            try {
+              const { topic, data: receivedData } = data as {
+                topic: string;
+                data: any;
               };
 
-              // Update controlData state directly
-              controlDataRef.current = {
-                rotation: axes.rotation,
-                brake: axes.brake,
-                throttle: axes.throttle,
-                gear: currentGear,
-              };
+              switch (topic) {
+                case "axes":
+                  // Type assertion for the "axes" topic
+                  const { axes, currentGear } = receivedData as {
+                    axes: {
+                      rotation: number;
+                      brake: number;
+                      throttle: number;
+                    };
+                    currentGear: string;
+                  };
 
-              setShowControl({
-                rotation: axes.rotation,
-                brake: axes.brake,
-                throttle: axes.throttle,
-                gear: currentGear,
-              });
-              break;
+                  // Update controlData state directly
+                  controlDataRef.current = {
+                    rotation: axes.rotation,
+                    brake: axes.brake,
+                    throttle: axes.throttle,
+                    gear: currentGear,
+                  };
 
-            case "fisheye":
-              // Type assertion for the "fisheye" topic
-              const fisheyeUrl = receivedData as string;
-              setReceivedCamera(fisheyeUrl);
-              break;
+                  setShowControl({
+                    rotation: axes.rotation,
+                    brake: axes.brake,
+                    throttle: axes.throttle,
+                    gear: currentGear,
+                  });
+                  break;
 
-            // setAssistiveMode
-            case "assistive_mode":
-              // Type assertion for the "assistive_mode" topic
-              const assistiveMode = receivedData as boolean;
-              setAssistiveMode(assistiveMode);
-              break;
+                case "fisheye":
+                  // Type assertion for the "fisheye" topic
+                  const fisheyeUrl = receivedData as string;
+                  setReceivedCamera(fisheyeUrl);
+                  break;
 
-            default:
-              console.error("未知话题:", topic);
-              break;
-          }
-        } catch (error) {
-          console.error("解析接收到的数据时出错:", error);
-        }
-      });
+                // setAssistiveMode
+                case "assistive_mode":
+                  // Type assertion for the "assistive_mode" topic
+                  const assistiveMode = receivedData as boolean;
+                  setAssistiveMode(assistiveMode);
+                  break;
 
-      conn.on("error", (error) => {
-        console.error("无法连接到控制端:", error);
-      });
-      conn.on("close", () => {
-        console.log("连接已关闭");
-        setConnected(false);
-        connRef.current = null; // 连接关闭时重置
+                default:
+                  console.error("未知话题:", topic);
+                  break;
+              }
+            } catch (error) {
+              console.error("解析接收到的数据时出错:", error);
+            }
+          });
+
+          conn.on("error", (error) => {
+            console.error("无法连接到控制端:", error);
+            setConnected(false); // 更新状态
+          });
+          conn.on("close", () => {
+            console.log("连接已关闭");
+            setConnected(false);
+            connRef.current = null; // 连接关闭时重置
+          });
+        });
       });
     });
 
+    // 尝试连接到远程 peer
+    // const conn = peer.connect(remotePeerId, {
+    //   label: "car-connection",
+    //   metadata: { role: "car" },
+    //   serialization: "binary",
+    //   reliable: false,
+    // });
+
+    // Handle incoming data
+    peer.on("error", (error) => {
+      console.error("Peer error:", error.type, error);
+      // 根据错误类型采取措施，例如重连或提示用户
+      if (error.type === "peer-unavailable") {
+        console.log("控制端不可用，请检查 remotePeerId");
+      }
+    });
+
     return () => {
-      peer.destroy();
-      console.log("车端 peer 已销毁.");
+      if (peerRef.current) {
+        peerRef.current.destroy();
+        peerRef.current = null;
+      }
+      if (connRef.current) {
+        connRef.current.close();
+        connRef.current = null;
+      }
+      console.log("车端 peer已关闭📴.");
     };
   }, [remotePeerId]); // 添加 remotePeerId 作为依赖项
 
@@ -546,7 +573,6 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
       const requestAnimationRTT = () => {
         collectRTT();
-        // console.log("RTT 延迟:", latencyRTT);
         animationRTTId = requestAnimationFrame(requestAnimationRTT);
       };
 
@@ -722,12 +748,13 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
       };
 
+      let animationFrameId: number;
+
       const requestAnimationFun = () => {
         sendControlData();
         animationFrameId = requestAnimationFrame(requestAnimationFun);
       };
 
-      let animationFrameId: number;
       requestAnimationFun();
 
       return () => {

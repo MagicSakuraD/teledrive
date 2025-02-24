@@ -72,36 +72,156 @@ const ControlEnd = () => {
   // const [packetLoss, setPacketLoss] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  let animationFrameId: number;
+
   useEffect(() => {
+    //create a peer
     const peer = new Peer("control-002", {
       host: "cyberc3-cloud-server.sjtu.edu.cn",
       port: 443,
       path: "/cyber",
       secure: true,
-      debug: 2,
+      debug: 3,
       config: {
         iceServers: [
+          // { urls: "turn:0.peerjs.com:3478" },
+          // { urls: "stun:stun.l.google.com:19302" },
+          // {
+          //   urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
+          //   username: "test",
+          //   credential: "123456",
+          // },
           {
             urls: "turn:asia-east.relay.metered.ca:80",
             username: "c0f6e9eca6e8a8dd3ee14525",
             credential: "Yr/JEAAWgXYEg4AW",
-          },
-          {
-            urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
-            username: "test",
-            credential: "123456",
           },
         ],
       },
     });
     peerRef.current = peer;
 
+    //assign peer id
     peer.on("open", (id) => {
       setMyPeerId(id);
       console.log(`控制端 peer ID: ${id}`);
+
+      // **控制端主动连接车端**
+      if (!connected && peerRef.current && remotePeerId) {
+        console.log("控制端尝试连接", remotePeerId);
+        const conn = peerRef.current.connect(remotePeerId, {
+          label: "control-connection",
+          metadata: { role: "controller" },
+          serialization: "binary",
+          reliable: false,
+        });
+
+        connRef.current = conn;
+
+        conn.on("data", (data: unknown) => {
+          if (data) {
+            const { topic, data: receivedData } = data as {
+              topic: string;
+              data: any;
+            };
+
+            switch (topic) {
+              case "feedback_sp":
+                // 如果接收到的是速度反馈信息
+
+                setFeedbackSpeed(receivedData); // 你可以将接收到的速度信息更新到状态中
+                break;
+
+              case "feedback_steer":
+                // 如果接收到的是转向反馈信息
+                // console.log("转向反馈信息", receivedData);
+                break;
+
+              case "road":
+                // 如果接收到的是道路信息
+                if (receivedData.length >= 2 && !normalRoad) {
+                  setNormalRoad(receivedData); // 你可以将接收到的道路信息更新到状态中
+                }
+                break;
+
+              case "traj":
+                // 如果接收到的是轨迹信息
+                setTrajectory(receivedData); // 你可以将接收到的轨迹信息更新到状态中
+                break;
+
+              case "localization":
+                // 如果接收到的是定位信息
+                // console.log("定位信息", receivedData);
+                setLocalization(receivedData); // 你可以将接收到的定位信息更新到状态中
+                break;
+
+              case "CentralLines":
+                // 如果接收到的是中心线信息
+
+                setCentralLines(receivedData); // 你可以将接收到的中心线信息更新到状态中
+                break;
+
+              case "obstacles":
+                // 如果接收到的是障碍物信息
+                // console.log("障碍物信息", receivedData);
+                setObstacles(receivedData); // 你可以将接收到的障碍物信息更新到状态中
+                break;
+
+              case "path_boundary":
+                // 如果接收到的是路径边界信息
+                // console.log("路径边界信息", receivedData);
+                setBoundary(receivedData); // 你可以将接收到的路径边界信息更新到状态中
+                break;
+
+              case "polygon_path":
+                // 如果接收到的是多边形路径信息
+                // console.log("多边形路径信息", receivedData);
+                setPolygonPath(receivedData); // 你可以将接收到的多边形路径信息更新到状态中
+                break;
+
+              default:
+                // console.warn("收到的不是预期的数据格式");
+
+                console.log("未知话题:", topic);
+                break;
+            }
+          } else {
+            console.warn("收到的不是预期的数据格式");
+          }
+        });
+
+        const monitorStats = () => {
+          if (connRef.current) {
+            startStatsMonitoring(connRef.current);
+            animationFrameId = requestAnimationFrame(monitorStats);
+          }
+        };
+
+        monitorStats();
+
+        conn.on("open", () => {
+          console.log("控制端成功连接到车端.");
+          setConnected(true);
+        });
+
+        conn.on("error", (err) => {
+          console.log("控制端连接失败", err);
+          setConnected(false);
+        });
+
+        conn.on("close", () => {
+          console.log("控制端连接已关闭");
+          setConnected(false);
+        });
+      }
     });
 
-    // Handle incoming calls
+    // 控制端监听 `connection` 事件，以便后续车端可能主动连接过来
+    // peer.on("connection", (conn) => {
+    //   connRef.current = conn;
+    // });
+
+    // answer call
     peer.on("call", (call) => {
       call.answer(); // Answer the call without sending any media
 
@@ -109,10 +229,10 @@ const ControlEnd = () => {
         if (videoRef.current) {
           videoRef.current.srcObject = remoteStream;
           videoRef.current.addEventListener("loadedmetadata", () => {
-            if (videoRef.current) {
-              videoRef.current.play(); // Play the stream after metadata is loaded
-            }
+            videoRef.current?.play(); // Play the stream after metadata is loaded
           });
+        } else {
+          console.error("videoRef 未定义");
         }
       });
 
@@ -125,115 +245,22 @@ const ControlEnd = () => {
       });
     });
 
-    let animationFrameId: number;
-
-    peer.on("connection", (conn) => {
-      connRef.current = conn;
-
-      conn.on("data", (data: unknown) => {
-        if (data) {
-          const { topic, data: receivedData } = data as {
-            topic: string;
-            data: any;
-          };
-
-          switch (topic) {
-            case "feedback_sp":
-              // 如果接收到的是速度反馈信息
-
-              setFeedbackSpeed(receivedData); // 你可以将接收到的速度信息更新到状态中
-              break;
-
-            case "feedback_steer":
-              // 如果接收到的是转向反馈信息
-              // console.log("转向反馈信息", receivedData);
-              break;
-
-            case "road":
-              // 如果接收到的是道路信息
-              if (receivedData.length >= 2 && !normalRoad) {
-                setNormalRoad(receivedData); // 你可以将接收到的道路信息更新到状态中
-              }
-              break;
-
-            case "traj":
-              // 如果接收到的是轨迹信息
-              setTrajectory(receivedData); // 你可以将接收到的轨迹信息更新到状态中
-              break;
-
-            case "localization":
-              // 如果接收到的是定位信息
-              // console.log("定位信息", receivedData);
-              setLocalization(receivedData); // 你可以将接收到的定位信息更新到状态中
-              break;
-
-            case "CentralLines":
-              // 如果接收到的是中心线信息
-
-              setCentralLines(receivedData); // 你可以将接收到的中心线信息更新到状态中
-              break;
-
-            case "obstacles":
-              // 如果接收到的是障碍物信息
-              // console.log("障碍物信息", receivedData);
-              setObstacles(receivedData); // 你可以将接收到的障碍物信息更新到状态中
-              break;
-
-            case "path_boundary":
-              // 如果接收到的是路径边界信息
-              // console.log("路径边界信息", receivedData);
-              setBoundary(receivedData); // 你可以将接收到的路径边界信息更新到状态中
-              break;
-
-            case "polygon_path":
-              // 如果接收到的是多边形路径信息
-              // console.log("多边形路径信息", receivedData);
-              setPolygonPath(receivedData); // 你可以将接收到的多边形路径信息更新到状态中
-              break;
-
-            case "road":
-              // 如果接收到的是道路信息
-              // console.log("道路信息", receivedData);
-              setNormalRoad(receivedData); // 你可以将接收到的道路信息更新到状态中
-              break;
-
-            default:
-              // console.warn("收到的不是预期的数据格式");
-
-              console.log("未知话题:", topic);
-              break;
-          }
-        } else {
-          console.warn("收到的不是预期的数据格式");
-        }
-      });
-
-      const monitorStats = () => {
-        startStatsMonitoring(connRef.current!);
-        animationFrameId = requestAnimationFrame(monitorStats);
-      };
-
-      conn.on("open", () => {
-        console.log("连接成功");
-        monitorStats();
-        setConnected(true);
-      });
-
-      conn.on("close", () => {
-        setConnected(false);
-      });
-
-      conn.on("error", (err) => {
-        console.log("连接失败", err);
-        setConnected(false);
-      });
+    //handle error
+    peer.on("error", (err) => {
+      console.error("Peer error:", err);
     });
 
     return () => {
-      if (peer) {
-        cancelAnimationFrame(animationFrameId);
-        peer.destroy();
+      if (peerRef.current) {
+        peerRef.current.destroy();
+        peerRef.current = null;
       }
+      if (connRef.current) {
+        connRef.current.close();
+        connRef.current = null;
+      }
+      cancelAnimationFrame(animationFrameId);
+      console.log("关闭连接📴");
     };
   }, []);
 
@@ -283,37 +310,6 @@ const ControlEnd = () => {
     }
   }, [axes, currentGear]); // 依赖数组中监听 axes 和 currentGear 的变化
 
-  useEffect(() => {
-    if (!connected) {
-      if (peerRef.current && remotePeerId) {
-        const conn = peerRef.current.connect(remotePeerId, {
-          label: "control-connection",
-          metadata: { role: "controller" },
-          serialization: "binary",
-          reliable: false,
-        });
-        connRef.current = conn;
-
-        conn.on("open", () => {
-          console.log("连接成功");
-          setConnected(true);
-        });
-
-        conn.on("error", (err) => {
-          console.log("连接失败", err);
-          setConnected(false);
-        });
-
-        conn.on("close", () => {
-          console.log("连接已关闭");
-          setConnected(false);
-        });
-
-        console.log("尝试连接", remotePeerId);
-      }
-    }
-  }, [remotePeerId]);
-
   const switchTopic = (newTopic: string) => {
     if (connRef.current) {
       connRef.current.send({ topic: "fisheye", data: newTopic });
@@ -334,7 +330,7 @@ const ControlEnd = () => {
         const rtt_ms = report.currentRoundTripTime;
         if (rtt_ms !== undefined) {
           setLatency(rtt_ms);
-          console.log("延迟:", rtt_ms);
+          // console.log("延迟:", rtt_ms);
         }
       }
     });
