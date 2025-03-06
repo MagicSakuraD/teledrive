@@ -65,12 +65,14 @@ const ControlEnd = () => {
   const [centralLines, setCentralLines] = useState<any>(null);
   const [boundary, setBoundary] = useState<any>(null);
   const [ploygonPath, setPolygonPath] = useState<any>(null);
+  const [predictedPoint, setPredictedPoint] = useState<any>(null);
 
   const [obstacles, setObstacles] = useState<any>(null);
   // 状态来存储延迟和丢包率
   const [latency, setLatency] = useState<number>(0);
   // const [packetLoss, setPacketLoss] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [assistiveMode, setAssistiveMode] = useState(false);
 
   let animationFrameId: number;
 
@@ -81,16 +83,14 @@ const ControlEnd = () => {
       port: 443,
       path: "/cyber",
       secure: true,
-      debug: 3,
+      debug: 2,
       config: {
         iceServers: [
-          // { urls: "turn:0.peerjs.com:3478" },
-          // { urls: "stun:stun.l.google.com:19302" },
-          // {
-          //   urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
-          //   username: "test",
-          //   credential: "123456",
-          // },
+          {
+            urls: "turn:111.186.56.118:3478",
+            username: "test",
+            credential: "123456",
+          },
           {
             urls: "turn:asia-east.relay.metered.ca:80",
             username: "c0f6e9eca6e8a8dd3ee14525",
@@ -117,6 +117,11 @@ const ControlEnd = () => {
         });
 
         connRef.current = conn;
+
+        conn.on("open", () => {
+          console.log("控制端成功连接到车端.");
+          setConnected(true);
+        });
 
         conn.on("data", (data: unknown) => {
           if (data) {
@@ -173,8 +178,14 @@ const ControlEnd = () => {
                 setBoundary(receivedData); // 你可以将接收到的路径边界信息更新到状态中
                 break;
 
+              case "predicted_state":
+                // 如果接收到的是估计状态信息
+                // console.log("估计状态信息", receivedData);
+                setPredictedPoint(receivedData); // 你可以将接收到的估计状态信息更新到状态中
+                break;
+
               case "polygon_path":
-                // 如果接收到的是多边形路径信息
+                // 如果接收到的是多边形路径信息,扇形可通行区域
                 // console.log("多边形路径信息", receivedData);
                 setPolygonPath(receivedData); // 你可以将接收到的多边形路径信息更新到状态中
                 break;
@@ -194,15 +205,12 @@ const ControlEnd = () => {
           if (connRef.current) {
             startStatsMonitoring(connRef.current);
             animationFrameId = requestAnimationFrame(monitorStats);
+          } else {
+            cancelAnimationFrame(animationFrameId);
           }
         };
 
         monitorStats();
-
-        conn.on("open", () => {
-          console.log("控制端成功连接到车端.");
-          setConnected(true);
-        });
 
         conn.on("error", (err) => {
           console.log("控制端连接失败", err);
@@ -243,6 +251,10 @@ const ControlEnd = () => {
       call.on("error", (err) => {
         console.error("Call error:", err);
       });
+    });
+
+    peer.on("disconnected", () => {
+      console.log("Peer disconnected");
     });
 
     //handle error
@@ -336,17 +348,31 @@ const ControlEnd = () => {
     });
   };
 
-  const switchChange = (checked: boolean) => {
+  // const switchChange = (checked: boolean) => {
+  //   if (connRef.current) {
+  //     connRef.current.send({ topic: "assistive_mode", data: checked });
+  //   }
+  // };
+
+  // 监听 assistiveMode 状态变化
+  useEffect(() => {
+    // 只在状态变化后且连接存在时发送信息
+    // console.log("assistiveMode:", assistiveMode);
     if (connRef.current) {
-      connRef.current.send({ topic: "assistive_mode", data: checked });
+      connRef.current.send({ topic: "assistive_mode", data: assistiveMode });
     }
+  }, [assistiveMode]); // 依赖于 assistiveMode
+
+  // 简化 switchChange 函数，现在只负责更新状态
+  const switchChange = (checked: boolean) => {
+    setAssistiveMode(checked);
   };
 
   return (
     <div className="w-full min-[2460px]:w-5/6 flex flex-col gap-3 p-3 my-auto">
-      <div className="flex flex-row gap-2 w-full">
+      <div className="flex flex-col gap-2 w-full">
         {/* threejs */}
-        <Card className=" basis-1/3">
+        <Card className="h-screen">
           {localization && (
             <Car3D
               localization={localization}
@@ -356,6 +382,7 @@ const ControlEnd = () => {
               boundary={boundary}
               normalRoad={normalRoad}
               ploygonPath={ploygonPath}
+              predictedPoint={predictedPoint}
             />
           )}
         </Card>
@@ -384,15 +411,19 @@ const ControlEnd = () => {
                 </code>
               </p>
               <ConnectionStatus connected={connected} />
-              {/* 
-            {!connected && (
-              <Button variant="outline" onClick={reconnect}>
-                重新连接
-              </Button>
-            )} */}
+
+              {/* {!connected && (
+                <Button variant="outline" onClick={reconnect}>
+                  重新连接
+                </Button>
+              )} */}
               <div className="flex items-center space-x-2">
                 <Label htmlFor="Assistive-mode">辅助模式</Label>
-                <Switch id="Assistive-mode" onCheckedChange={switchChange} />
+                <Switch
+                  id="Assistive-mode"
+                  onCheckedChange={switchChange}
+                  checked={assistiveMode}
+                />
               </div>
             </div>
             <Select onValueChange={switchTopic}>
@@ -426,6 +457,7 @@ const ControlEnd = () => {
             currentGear={currentGear}
             setCurrentGear={setCurrentGear}
             feedbackSpeed={feedbackSpeed}
+            setAssistiveMode={setAssistiveMode}
           />
         </div>
       </Card>

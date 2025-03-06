@@ -14,6 +14,7 @@ import {
   simplifyRoads,
   bestTrajectory,
   simplifyPolygon_path,
+  simplifyMarkers_predicted,
 } from "@/lib/simplifyMarkers";
 
 const Car = ({ remotePeerId = "control-002" }) => {
@@ -125,11 +126,11 @@ const Car = ({ remotePeerId = "control-002" }) => {
         iceServers: [
           // { urls: "turn:0.peerjs.com:3478" },
           // { urls: "stun:stun.l.google.com:19302" },
-          // {
-          //   urls: "turn:cyberc3-cloud-server.sjtu.edu.cn:3478",
-          //   username: "test",
-          //   credential: "123456",
-          // },
+          {
+            urls: "turn:111.186.56.118:3478",
+            username: "test",
+            credential: "123456",
+          },
           {
             urls: "turn:asia-east.relay.metered.ca:80",
             username: "c0f6e9eca6e8a8dd3ee14525",
@@ -139,91 +140,91 @@ const Car = ({ remotePeerId = "control-002" }) => {
       },
     });
 
-    if (peer) {
-      peerRef.current = peer;
-    }
+    peerRef.current = peer;
 
     // assign peer ID
     peer.on("open", (id) => {
       setPeerId(id);
       console.log(`车端 peer ID: ${id}`);
+    });
 
-      //Receive connection,只监听，不主动连接
-      peer.on("connection", (conn) => {
-        console.log("车端连接到控制端:", conn.peer);
+    //Receive connection,只监听，不主动连接
+    peer.on("connection", (conn) => {
+      console.log("车端连接到控制端:", conn.peer);
 
-        connRef.current = conn;
-        conn.on("open", () => {
-          console.log("成功连接到控制端.");
-          setConnected(true);
-          // 监听控制端发送的数据
-          conn.on("data", (data) => {
-            try {
-              const { topic, data: receivedData } = data as {
-                topic: string;
-                data: any;
+      connRef.current = conn;
+
+      conn.on("open", () => {
+        console.log("成功连接到控制端.");
+        setConnected(true);
+        // 监听控制端发送的数据
+      });
+
+      conn.on("data", (data) => {
+        try {
+          const { topic, data: receivedData } = data as {
+            topic: string;
+            data: any;
+          };
+
+          switch (topic) {
+            case "axes":
+              // Type assertion for the "axes" topic
+              const { axes, currentGear } = receivedData as {
+                axes: {
+                  rotation: number;
+                  brake: number;
+                  throttle: number;
+                };
+                currentGear: string;
               };
 
-              switch (topic) {
-                case "axes":
-                  // Type assertion for the "axes" topic
-                  const { axes, currentGear } = receivedData as {
-                    axes: {
-                      rotation: number;
-                      brake: number;
-                      throttle: number;
-                    };
-                    currentGear: string;
-                  };
+              // Update controlData state directly
+              controlDataRef.current = {
+                rotation: axes.rotation,
+                brake: axes.brake,
+                throttle: axes.throttle,
+                gear: currentGear,
+              };
 
-                  // Update controlData state directly
-                  controlDataRef.current = {
-                    rotation: axes.rotation,
-                    brake: axes.brake,
-                    throttle: axes.throttle,
-                    gear: currentGear,
-                  };
+              setShowControl({
+                rotation: axes.rotation,
+                brake: axes.brake,
+                throttle: axes.throttle,
+                gear: currentGear,
+              });
+              break;
 
-                  setShowControl({
-                    rotation: axes.rotation,
-                    brake: axes.brake,
-                    throttle: axes.throttle,
-                    gear: currentGear,
-                  });
-                  break;
+            case "fisheye":
+              // Type assertion for the "fisheye" topic
+              const fisheyeUrl = receivedData as string;
+              setReceivedCamera(fisheyeUrl);
+              break;
 
-                case "fisheye":
-                  // Type assertion for the "fisheye" topic
-                  const fisheyeUrl = receivedData as string;
-                  setReceivedCamera(fisheyeUrl);
-                  break;
+            // setAssistiveMode
+            case "assistive_mode":
+              // Type assertion for the "assistive_mode" topic
+              const assistiveMode = receivedData as boolean;
+              setAssistiveMode(assistiveMode);
+              break;
 
-                // setAssistiveMode
-                case "assistive_mode":
-                  // Type assertion for the "assistive_mode" topic
-                  const assistiveMode = receivedData as boolean;
-                  setAssistiveMode(assistiveMode);
-                  break;
+            default:
+              console.error("未知话题:", topic);
+              break;
+          }
+        } catch (error) {
+          console.error("解析接收到的数据时出错:", error);
+        }
+      });
 
-                default:
-                  console.error("未知话题:", topic);
-                  break;
-              }
-            } catch (error) {
-              console.error("解析接收到的数据时出错:", error);
-            }
-          });
-
-          conn.on("error", (error) => {
-            console.error("无法连接到控制端:", error);
-            setConnected(false); // 更新状态
-          });
-          conn.on("close", () => {
-            console.log("连接已关闭");
-            setConnected(false);
-            connRef.current = null; // 连接关闭时重置
-          });
-        });
+      conn.on("error", (error) => {
+        console.error("无法连接到控制端:", error);
+        setConnected(false); // 更新状态
+      });
+      conn.on("close", () => {
+        console.log("连接已关闭");
+        setConnected(false);
+        connRef.current = null; // 连接关闭时重置
       });
     });
 
@@ -255,7 +256,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
       }
       console.log("车端 peer已关闭📴.");
     };
-  }, [remotePeerId]); // 添加 remotePeerId 作为依赖项
+  }, []); // 添加 remotePeerId 作为依赖项
 
   useEffect(() => {
     if (!rosRef.current) {
@@ -406,24 +407,44 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
       });
 
-      //订阅障碍物话题/visualization/obstacles
-      const obstaclesListener = new ROSLIB.Topic({
+      //这是我最新的源代码，把补偿时延的自车估计加上了，补偿时延后的自车定位话题是/estimated_state，消息类型是nav_msgs::Odometry，里面包括est_msg.pose.pose.position.x  est_msg.pose.pose.position.y  est_msg.pose.pose.orientation（位置和朝向）
+      //订阅车辆位置话题/visualization/estimated_state
+      //更新为话题 /predicted_state 消息类型 visualization_msgs::MarkerArray
+      const predictedStateListener = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: "/visualization/obstacles",
+        name: "/predicted_state",
         messageType: "visualization_msgs/MarkerArray",
       });
 
-      obstaclesListener.subscribe((message: any) => {
+      predictedStateListener.subscribe((message: any) => {
         if (message) {
-          // console.log("障碍物", message.markers);
           if (connRef.current && connRef.current.open) {
             connRef.current.send({
-              topic: "obstacles",
-              data: simplifyMarkers_obs(message.markers),
+              topic: "predicted_state",
+              data: simplifyMarkers_predicted(message.markers),
             });
           }
         }
       });
+
+      //订阅障碍物话题/visualization/obstacles
+      // const obstaclesListener = new ROSLIB.Topic({
+      //   ros: rosRef.current,
+      //   name: "/visualization/obstacles",
+      //   messageType: "visualization_msgs/MarkerArray",
+      // });
+
+      // obstaclesListener.subscribe((message: any) => {
+      //   if (message) {
+      //     // console.log("障碍物", message.markers);
+      //     if (connRef.current && connRef.current.open) {
+      //       connRef.current.send({
+      //         topic: "obstacles",
+      //         data: simplifyMarkers_obs(message.markers),
+      //       });
+      //     }
+      //   }
+      // });
 
       // 订阅车辆轨迹话题traj
       // const trajListener = new ROSLIB.Topic({
@@ -481,22 +502,22 @@ const Car = ({ remotePeerId = "control-002" }) => {
       });
 
       //订阅话题polygon_path消息类型visualization_msgs/MarkerArray
-      const polygonPathListener = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/polygon_path",
-        messageType: "visualization_msgs/MarkerArray",
-      });
+      // const polygonPathListener = new ROSLIB.Topic({
+      //   ros: rosRef.current,
+      //   name: "/polygon_path",
+      //   messageType: "visualization_msgs/MarkerArray",
+      // });
 
-      polygonPathListener.subscribe((message: any) => {
-        if (message) {
-          if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "polygon_path",
-              data: simplifyPolygon_path(message.markers),
-            });
-          }
-        }
-      });
+      // polygonPathListener.subscribe((message: any) => {
+      //   if (message) {
+      //     if (connRef.current && connRef.current.open) {
+      //       connRef.current.send({
+      //         topic: "polygon_path",
+      //         data: simplifyPolygon_path(message.markers),
+      //       });
+      //     }
+      //   }
+      // });
 
       //订阅道路边界/visulization/path_boundary
       const pathBoundaryListener = new ROSLIB.Topic({
@@ -517,35 +538,35 @@ const Car = ({ remotePeerId = "control-002" }) => {
       });
 
       //订阅可行驶宽度：/visualization/ll_text
-      const llTextListener = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/visualization/ll_text",
-        messageType: "visualization_msgs/Marker",
-      });
+      // const llTextListener = new ROSLIB.Topic({
+      //   ros: rosRef.current,
+      //   name: "/visualization/ll_text",
+      //   messageType: "visualization_msgs/Marker",
+      // });
 
-      llTextListener.subscribe((message: any) => {
-        if (message) {
-          if (connRef.current && connRef.current.open) {
-            // console.log("ll_text message.text", message.text);
-            passableWidthRef.current = message.text;
-          }
-        }
-      });
+      // llTextListener.subscribe((message: any) => {
+      //   if (message) {
+      //     if (connRef.current && connRef.current.open) {
+      //       // console.log("ll_text message.text", message.text);
+      //       passableWidthRef.current = message.text;
+      //     }
+      //   }
+      // });
 
       //订阅可行驶长度：/visualization/lon_text
-      const lonTextListener = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/visualization/lon_text",
-        messageType: "visualization_msgs/Marker",
-      });
+      // const lonTextListener = new ROSLIB.Topic({
+      //   ros: rosRef.current,
+      //   name: "/visualization/lon_text",
+      //   messageType: "visualization_msgs/Marker",
+      // });
 
-      lonTextListener.subscribe((message: any) => {
-        if (message) {
-          if (connRef.current && connRef.current.open) {
-            passableLengthRef.current = message.text;
-          }
-        }
-      });
+      // lonTextListener.subscribe((message: any) => {
+      //   if (message) {
+      //     if (connRef.current && connRef.current.open) {
+      //       passableLengthRef.current = message.text;
+      //     }
+      //   }
+      // });
 
       const peerConnection = connRef.current!
         .peerConnection as RTCPeerConnection;
@@ -587,7 +608,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
         feedbackListener.unsubscribe();
         steerListener.unsubscribe();
-        obstaclesListener.unsubscribe();
+        // obstaclesListener.unsubscribe();
         localizationListener.unsubscribe();
         // trajListener.unsubscribe();
         bestTrajListener.unsubscribe();
@@ -796,7 +817,12 @@ const Car = ({ remotePeerId = "control-002" }) => {
         </CardHeader>
         <CardContent>
           <p>车端ID: {peerId}</p>
-          <p>状态: {connected ? "已连接" : "未连接"}</p>
+          <p>
+            状态:{" "}
+            <span className={connected ? "text-green-500" : "text-rose-500"}>
+              {connected ? "已连接" : "未连接"}
+            </span>
+          </p>
           <p>转向: {Math.floor(steer_angle ?? 0)}°</p>
           {/* <p>转向：{Math.floor(showControl.rotation)}°</p> */}
           <p>刹车: {Math.floor(showControl.brake * 100)}%</p>

@@ -32,6 +32,7 @@ interface GamepadProps {
   currentGear: string;
   setCurrentGear: React.Dispatch<React.SetStateAction<string>>;
   feedbackSpeed: number;
+  setAssistiveMode: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const Gamepad: React.FC<GamepadProps> = ({
@@ -40,6 +41,7 @@ const Gamepad: React.FC<GamepadProps> = ({
   currentGear,
   setCurrentGear,
   feedbackSpeed,
+  setAssistiveMode,
 }) => {
   const [gamepad, setGamepad] = useState<Gamepad | null>(null);
   const [isGamepadSupported, setIsGamepadSupported] = useState<boolean>(true);
@@ -99,6 +101,21 @@ const Gamepad: React.FC<GamepadProps> = ({
             throttle: parseFloat(((1 - gp.axes[2]) / 2 || 0).toFixed(2)), // Throttle
           };
           setAxes(newAxes);
+
+          //加上一遍历测试按钮的状态的程序
+          // Test different buttons and print their indices when pressed
+          // for (let i = 0; i < gp.buttons.length; i++) {
+          //   if (gp.buttons[i].pressed) {
+          //     console.log(`Button ${i} pressed`);
+          //   }
+          // }
+          //点击gp.buttons[6],切换辅助驾驶模式false,点击gp.buttons[7],切换辅助驾驶模式true
+          if (gp.buttons[6].pressed) {
+            setAssistiveMode(false);
+          }
+          if (gp.buttons[7].pressed) {
+            setAssistiveMode(true);
+          }
 
           // Update buttons state
           const newButtons = [

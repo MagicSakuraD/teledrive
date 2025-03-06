@@ -23,6 +23,7 @@ import Polygon from "./models/polygon";
 import Lanes from "./models/lane";
 import PolygonPath from "./models/polygonPath";
 import { polygonPathType } from "./models/polygonPath";
+import HistoryTrajectory from "./models/HistoryTrajectory";
 
 export type trajType = {
   id: string;
@@ -43,6 +44,7 @@ interface Car3DProps {
   boundary: trajType[];
   normalRoad: Marker[];
   ploygonPath: polygonPathType[];
+  predictedPoint: pointMarker[];
 }
 
 const Car3D: React.FC<Car3DProps> = ({
@@ -53,6 +55,7 @@ const Car3D: React.FC<Car3DProps> = ({
   boundary,
   normalRoad,
   ploygonPath,
+  predictedPoint,
 }) => {
   const textObstacles: Marker[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: Marker) => obstacle.type === 9)
@@ -94,9 +97,15 @@ const Car3D: React.FC<Car3DProps> = ({
       <ModelSuv
         position={[0, 0, 0]} // 车辆位置为原点
         quaternion={finalQuaternion}
-        scale={[1, 1, 1]}
+        scale={[0.8, 0.8, 0.8]}
       />
 
+      <HistoryTrajectory
+        predictedPoints={predictedPoint}
+        localization={localization}
+        color="#facc15"
+        lineWidth={5}
+      />
       {/* {textObstacles.map(
         (obstacle: Marker, index: number) =>
           obstacle && (
@@ -123,16 +132,13 @@ const Car3D: React.FC<Car3DProps> = ({
             </Text3D>
           )
       )} */}
-
       <Polygon markers={polygonObstacles} localization={localization} />
       {ploygonPath && (
         <PolygonPath paths={ploygonPath} localization={localization} />
       )}
-
       {normalRoad && normalRoad.length > 2 && (
         <Lanes roads={normalRoad} localization={localization} />
       )}
-
       {/* {arrowObstacles.map((obstacle: Marker, index: number) => {
           const obstacleQuaternion = computeFinalQuaternion(
             obstacle.pose.orientation
@@ -164,7 +170,6 @@ const Car3D: React.FC<Car3DProps> = ({
       {/* {trajectory && trajectory.length > 0 && (
         <TrajectoryLine trajectory={trajectory} localization={localization} />
       )} */}
-
       {/* <gridHelper args={[60, 6]} /> */}
       {/* <axesHelper args={[200]} /> */}
     </Canvas>

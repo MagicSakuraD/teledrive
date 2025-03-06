@@ -20,6 +20,11 @@ export interface Marker {
   points?: { x: number; y: number; z: number }[];
 }
 
+export type pointMarker = {
+  position: { x: number; y: number; z: number };
+  orientation: { x: number; y: number; z: number; w: number };
+};
+
 export function simplifyMarkers_tarj(markers: Marker[]) {
   return markers.map((marker) => ({
     id: marker.id,
@@ -59,11 +64,6 @@ export function simplifyMarkers_boundary(markers: Marker[]) {
   }));
 }
 
-export type pointMarker = {
-  position: { x: number; y: number; z: number };
-  orientation: { x: number; y: number; z: number; w: number };
-};
-
 export function simplifyMarker_loc(message: any): pointMarker {
   return {
     position: {
@@ -78,6 +78,17 @@ export function simplifyMarker_loc(message: any): pointMarker {
       w: message.pose.orientation.w,
     },
   };
+}
+
+//simplifyMarkers_predicted参数的类型pointMarker类型
+export function simplifyMarkers_predicted(markers: Marker[]) {
+  return markers.map((marker) => ({
+    position: {
+      x: -marker.pose!.position.x,
+      y: marker.pose!.position.z, // Swap y and z
+      z: marker.pose!.position.y, // Swap y and z
+    },
+  }));
 }
 
 export function simplifyRoads(roads: Marker[]) {
