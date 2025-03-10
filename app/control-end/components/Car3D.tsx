@@ -24,6 +24,8 @@ import Lanes from "./models/lane";
 import PolygonPath from "./models/polygonPath";
 import { polygonPathType } from "./models/polygonPath";
 import HistoryTrajectory from "./models/HistoryTrajectory";
+import SafetyContour from "./models/SafetyContour";
+import SafetyContourOutline from "./models/SafetyContourOutline";
 
 export type trajType = {
   id: string;
@@ -45,6 +47,7 @@ interface Car3DProps {
   normalRoad: Marker[];
   ploygonPath: polygonPathType[];
   predictedPoint: pointMarker[];
+  safetyContourData?: number[];
 }
 
 const Car3D: React.FC<Car3DProps> = ({
@@ -56,6 +59,7 @@ const Car3D: React.FC<Car3DProps> = ({
   normalRoad,
   ploygonPath,
   predictedPoint,
+  safetyContourData,
 }) => {
   const textObstacles: Marker[] = Array.isArray(obstacles)
     ? obstacles.filter((obstacle: Marker) => obstacle.type === 9)
@@ -70,7 +74,7 @@ const Car3D: React.FC<Car3DProps> = ({
     : [];
 
   const finalQuaternion = computeFinalQuaternion(localization.orientation);
-
+  console.log("trajectory", trajectory);
   //中心线减去车辆位置
   const Rodeline = centralLines
     ? centralLines.map(
@@ -84,7 +88,7 @@ const Car3D: React.FC<Car3DProps> = ({
     : [];
 
   return (
-    <Canvas className="bg-gray-900 rounded-md">
+    <Canvas className="bg-gray-900 rounded-md" frameloop="demand">
       {/* <PerspectiveCamera makeDefault position={[0, 20, -4]} />
       <OrbitControls target={[0, 0, 0]} /> */}
       <FollowCamera quaternion={finalQuaternion} />
@@ -100,12 +104,32 @@ const Car3D: React.FC<Car3DProps> = ({
         scale={[0.8, 0.8, 0.8]}
       />
 
-      <HistoryTrajectory
-        predictedPoints={predictedPoint}
-        localization={localization}
-        color="#facc15"
-        lineWidth={5}
-      />
+      {/* 添加安全轮廓可视化 */}
+      {/* {safetyContourData && safetyContourData.length > 0 && (
+        <>
+          <SafetyContour
+            safetyData={safetyContourData}
+            localization={localization}
+            maxDistance={10}
+          />
+          <SafetyContourOutline
+            safetyData={safetyContourData}
+            localization={localization}
+            maxDistance={20}
+            lineWidth={2}
+          />
+        </>
+      )} */}
+
+      {/* {predictedPoint && (
+        <HistoryTrajectory
+          predictedPoints={predictedPoint}
+          localization={localization}
+          color="#facc15"
+          lineWidth={5}
+        />
+      )} */}
+
       {/* {textObstacles.map(
         (obstacle: Marker, index: number) =>
           obstacle && (
@@ -133,9 +157,7 @@ const Car3D: React.FC<Car3DProps> = ({
           )
       )} */}
       <Polygon markers={polygonObstacles} localization={localization} />
-      {ploygonPath && (
-        <PolygonPath paths={ploygonPath} localization={localization} />
-      )}
+
       {normalRoad && normalRoad.length > 2 && (
         <Lanes roads={normalRoad} localization={localization} />
       )}
@@ -167,9 +189,9 @@ const Car3D: React.FC<Car3DProps> = ({
       )} */}
       {/* {centralLines && <Road centralLines={Rodeline} roadWidth={5} />} */}
       {/* 显示轨迹，轨迹点也减去车辆位置 */}
-      {/* {trajectory && trajectory.length > 0 && (
+      {trajectory && trajectory.length > 0 && (
         <TrajectoryLine trajectory={trajectory} localization={localization} />
-      )} */}
+      )}
       {/* <gridHelper args={[60, 6]} /> */}
       {/* <axesHelper args={[200]} /> */}
     </Canvas>

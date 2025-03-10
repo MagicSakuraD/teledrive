@@ -43,7 +43,7 @@ const TrajectoryLine = React.memo(
       <Line
         points={points}
         // color="#22c55e"
-        lineWidth={20}
+        lineWidth={30}
         vertexColors={colors}
         transparent
       />

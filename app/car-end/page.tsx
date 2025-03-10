@@ -89,27 +89,30 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
       if (ctx) {
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        ctx.drawImage(avmImage, 0, 0, avmimageWidth, imageHeight);
+        // 先画 receivedImage 在左侧
+        ctx.drawImage(receivedImage, 0, 0, secondImageWidth, imageHeight);
 
+        // 再画 avmImage 在右侧
         ctx.drawImage(
-          receivedImage,
-          avmimageWidth,
-          0,
+          avmImage,
           secondImageWidth,
+          0,
+          avmimageWidth,
           imageHeight
         );
 
+        // 更新指南线的位置，现在应该在 avmImage 上绘制
         drawGuideLine(
-          avmimageWidth / 2,
+          secondImageWidth + avmimageWidth / 2, // 更新基准点位置
           imageHeight / 2,
           (steerAngleRef.current ?? 1) / 15.58,
           ctx,
           gearRef.current ?? "N"
         );
 
-        // drawText(ctx, `${passableWidthRef.current}`, avmimageWidth / 2, 40);
-
-        // drawText(ctx, `${passableLengthRef.current}`, avmimageWidth / 2, 100);
+        // 如果有文字显示，也需要更新位置
+        // drawText(ctx, `${passableWidthRef.current}`, secondImageWidth + avmimageWidth / 2, 40);
+        // drawText(ctx, `${passableLengthRef.current}`, secondImageWidth + avmimageWidth / 2, 100);
       }
     }
   };
@@ -321,6 +324,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
       });
 
       feedbackListener.subscribe((message: any) => {
+        console.log("车辆速度", message.speed_cms);
         if (message) {
           setSpeed(message.speed_cms);
           switch (message.gear) {
@@ -410,41 +414,41 @@ const Car = ({ remotePeerId = "control-002" }) => {
       //这是我最新的源代码，把补偿时延的自车估计加上了，补偿时延后的自车定位话题是/estimated_state，消息类型是nav_msgs::Odometry，里面包括est_msg.pose.pose.position.x  est_msg.pose.pose.position.y  est_msg.pose.pose.orientation（位置和朝向）
       //订阅车辆位置话题/visualization/estimated_state
       //更新为话题 /predicted_state 消息类型 visualization_msgs::MarkerArray
-      const predictedStateListener = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/predicted_state",
-        messageType: "visualization_msgs/MarkerArray",
-      });
-
-      predictedStateListener.subscribe((message: any) => {
-        if (message) {
-          if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "predicted_state",
-              data: simplifyMarkers_predicted(message.markers),
-            });
-          }
-        }
-      });
-
-      //订阅障碍物话题/visualization/obstacles
-      // const obstaclesListener = new ROSLIB.Topic({
+      // const predictedStateListener = new ROSLIB.Topic({
       //   ros: rosRef.current,
-      //   name: "/visualization/obstacles",
+      //   name: "/predicted_state",
       //   messageType: "visualization_msgs/MarkerArray",
       // });
 
-      // obstaclesListener.subscribe((message: any) => {
+      // predictedStateListener.subscribe((message: any) => {
       //   if (message) {
-      //     // console.log("障碍物", message.markers);
       //     if (connRef.current && connRef.current.open) {
       //       connRef.current.send({
-      //         topic: "obstacles",
-      //         data: simplifyMarkers_obs(message.markers),
+      //         topic: "predicted_state",
+      //         data: simplifyMarkers_predicted(message.markers),
       //       });
       //     }
       //   }
       // });
+
+      //订阅障碍物话题/visualization/obstacles
+      const obstaclesListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/visualization/obstacles",
+        messageType: "visualization_msgs/MarkerArray",
+      });
+
+      obstaclesListener.subscribe((message: any) => {
+        if (message) {
+          // console.log("障碍物", message.markers);
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "obstacles",
+              data: simplifyMarkers_obs(message.markers),
+            });
+          }
+        }
+      });
 
       // 订阅车辆轨迹话题traj
       // const trajListener = new ROSLIB.Topic({
@@ -465,23 +469,41 @@ const Car = ({ remotePeerId = "control-002" }) => {
       //   }
       // });
 
-      // 订阅车辆最好轨迹/visualization/best_trajectories
-      const bestTrajListener = new ROSLIB.Topic({
+      //订阅车辆轨迹predicted_trajectory_markers
+      const predictedTrajListener = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: "/visualization/best_trajectories",
+        name: "/predicted_trajectory_markers",
         messageType: "visualization_msgs/MarkerArray",
       });
 
-      bestTrajListener.subscribe((message: any) => {
+      predictedTrajListener.subscribe((message: any) => {
         if (message) {
           if (connRef.current && connRef.current.open) {
             connRef.current.send({
               topic: "traj",
-              data: bestTrajectory(message.markers),
+              data: simplifyMarkers_tarj(message.markers),
             });
           }
         }
       });
+
+      // 订阅车辆最好轨迹/visualization/best_trajectories
+      // const bestTrajListener = new ROSLIB.Topic({
+      //   ros: rosRef.current,
+      //   name: "/visualization/best_trajectories",
+      //   messageType: "visualization_msgs/MarkerArray",
+      // });
+
+      // bestTrajListener.subscribe((message: any) => {
+      //   if (message) {
+      //     if (connRef.current && connRef.current.open) {
+      //       connRef.current.send({
+      //         topic: "traj",
+      //         data: bestTrajectory(message.markers),
+      //       });
+      //     }
+      //   }
+      // });
 
       //订阅参考中心线/visualization/reference_central_lines
       const referenceCentralLinesListener = new ROSLIB.Topic({
@@ -501,23 +523,26 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
       });
 
-      //订阅话题polygon_path消息类型visualization_msgs/MarkerArray
-      // const polygonPathListener = new ROSLIB.Topic({
-      //   ros: rosRef.current,
-      //   name: "/polygon_path",
-      //   messageType: "visualization_msgs/MarkerArray",
-      // });
+      // 话题名：/safety_contour_data  消息类型：std_msgs::Float32MultiArray
+      // data里面以3个数为一个单位，第一个转角，第二个加速度，第三个是预测距离
+      // 如果没有障碍物data就是空，有障碍物data才会发数据
+      //订阅安全轮廓话题/safety_contour_data
+      const safetyContourListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/safety_contour_data",
+        messageType: "std_msgs/Float32MultiArray",
+      });
 
-      // polygonPathListener.subscribe((message: any) => {
-      //   if (message) {
-      //     if (connRef.current && connRef.current.open) {
-      //       connRef.current.send({
-      //         topic: "polygon_path",
-      //         data: simplifyPolygon_path(message.markers),
-      //       });
-      //     }
-      //   }
-      // });
+      safetyContourListener.subscribe((message: any) => {
+        if (message) {
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "safetyContour",
+              data: message.data,
+            });
+          }
+        }
+      });
 
       //订阅道路边界/visulization/path_boundary
       const pathBoundaryListener = new ROSLIB.Topic({
@@ -608,10 +633,12 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
         feedbackListener.unsubscribe();
         steerListener.unsubscribe();
-        // obstaclesListener.unsubscribe();
+        obstaclesListener.unsubscribe();
         localizationListener.unsubscribe();
         // trajListener.unsubscribe();
-        bestTrajListener.unsubscribe();
+        // bestTrajListener.unsubscribe();
+        predictedTrajListener.unsubscribe();
+        safetyContourListener.unsubscribe();
         referenceCentralLinesListener.unsubscribe();
         cancelAnimationFrame(animationRTTId);
       };
