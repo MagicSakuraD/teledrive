@@ -324,7 +324,6 @@ const Car = ({ remotePeerId = "control-002" }) => {
       });
 
       feedbackListener.subscribe((message: any) => {
-        console.log("车辆速度", message.speed_cms);
         if (message) {
           setSpeed(message.speed_cms);
           switch (message.gear) {
@@ -430,6 +429,24 @@ const Car = ({ remotePeerId = "control-002" }) => {
       //     }
       //   }
       // });
+
+      //订阅/localization/estimation中的加速度
+      const accelerationListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/localization/estimation",
+        messageType: "cyber_msgs/LocalizationEstimate",
+      });
+
+      accelerationListener.subscribe((message: any) => {
+        if (message) {
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "acceleration",
+              data: message.acceleration.linear.x,
+            });
+          }
+        }
+      });
 
       //订阅障碍物话题/visualization/obstacles
       const obstaclesListener = new ROSLIB.Topic({

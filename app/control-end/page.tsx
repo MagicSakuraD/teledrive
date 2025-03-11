@@ -23,6 +23,8 @@ import { pointMarker } from "@/lib/simplifyMarkers";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import SafetyChart from "./components/SafetyChart";
+import { set } from "zod";
+import { Preahvihear } from "next/font/google";
 
 const ConnectionStatus = React.memo(({ connected }: { connected: boolean }) => (
   <span
@@ -60,8 +62,6 @@ const ControlEnd = () => {
   const [currentGear, setCurrentGear] = useState<string>("D");
   // 用于保存反馈速度的 state
   const [feedbackSpeed, setFeedbackSpeed] = useState<number>(0);
-  const [prevFeedbackSpeed, setPrevFeedbackSpeed] = useState<number>(0);
-  const [currentAcceleration, setCurrentAcceleration] = useState<number>(0);
 
   const [currentSteerAngle, setCurrentSteerAngle] = useState<number>(0);
   const [normalRoad, setNormalRoad] = useState<any>(null);
@@ -80,18 +80,9 @@ const ControlEnd = () => {
   const [assistiveMode, setAssistiveMode] = useState(false);
   const [safetyContour, setSafetyContour] = useState<any>(null);
 
+  //加速度
+  const [acceleration, setAcceleration] = useState<number>(0);
   let animationFrameId: number;
-
-  // 更新来自车辆的反馈数据
-  useEffect(() => {
-    if (feedbackSpeed === 0) {
-      setCurrentAcceleration(0);
-      return;
-    }
-    const acceleration = (feedbackSpeed - prevFeedbackSpeed) / 0.05;
-    setCurrentAcceleration(acceleration);
-    setPrevFeedbackSpeed(feedbackSpeed);
-  }, [feedbackSpeed]);
 
   useEffect(() => {
     //create a peer
@@ -182,6 +173,11 @@ const ControlEnd = () => {
                 // 如果接收到的是中心线信息
 
                 setCentralLines(receivedData); // 你可以将接收到的中心线信息更新到状态中
+                break;
+
+              case "acceleration":
+                // 如果接收到的是加速度信息
+                setAcceleration(receivedData);
                 break;
 
               case "obstacles":
@@ -396,29 +392,89 @@ const ControlEnd = () => {
     <div className="w-full min-[2460px]:w-5/6 flex flex-col gap-3 p-3 my-auto">
       <div className="flex flex-row gap-2 w-full">
         {/* threejs */}
-        <Card className="basis-1/3">
+        <Card className="basis-1/3 relative">
           {localization && (
-            <Car3D
-              localization={localization}
-              obstacles={obstacles}
-              trajectory={trajectory}
-              centralLines={centralLines}
-              boundary={boundary}
-              normalRoad={normalRoad}
-              ploygonPath={ploygonPath}
-              predictedPoint={predictedPoint}
-              safetyContourData={safetyContour}
-            />
+            <>
+              <Car3D
+                localization={localization}
+                obstacles={obstacles}
+                trajectory={trajectory}
+                centralLines={centralLines}
+                boundary={boundary}
+                normalRoad={normalRoad}
+                ploygonPath={ploygonPath}
+                predictedPoint={predictedPoint}
+                safetyContourData={safetyContour}
+              />
+
+              <Badge
+                variant={"outline"}
+                className="absolute border-none bottom-0 right-0 z-10"
+              >
+                <SafetyChart
+                  safetyData={safetyContour}
+                  currentAngle={currentSteerAngle / -15.58} // 转换方向盘角度
+                  currentAcceleration={acceleration}
+                />
+              </Badge>
+            </>
           )}
         </Card>
 
         {/* video */}
+        <Card className="overflow-hidden grow">
+          <div className="relative">
+            <video ref={videoRef} className="w-full h-auto aspect-[25/9]" />
+            <Badge
+              variant={"outline"}
+              className="absolute border-none top-0 right-0 flex flex-row gap-1 items-center text-green-600 z-10"
+            >
+              <Wifi className="w-4 h-4" />
+              <p className="text-xs">
+                延迟: <b className="">{`${latency * 1000} ms`}</b>
+              </p>
+            </Badge>
+          </div>
 
-        <SafetyChart
-          safetyData={safetyContour}
-          currentAngle={currentSteerAngle / -15.58} // 转换方向盘角度
-          currentAcceleration={currentAcceleration / 100} // 转换加速度从cm 2 m
-        />
+          <CardFooter className="flex flex-row justify-between py-2 w-full">
+            <div className="flex gap-6 items-center mt-1">
+              <p>
+                控制端ID:
+                <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+                  {myPeerId}
+                </code>
+              </p>
+              <ConnectionStatus connected={connected} />
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="Assistive-mode">辅助模式</Label>
+                <Switch
+                  id="Assistive-mode"
+                  onCheckedChange={switchChange}
+                  checked={assistiveMode}
+                />
+              </div>
+            </div>
+            <Select onValueChange={switchTopic}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="选择摄像头" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="/driver/fisheye/front/compressed">
+                  前置摄像头
+                </SelectItem>
+                <SelectItem value="/driver/fisheye/back/compressed">
+                  后置摄像头
+                </SelectItem>
+                <SelectItem value="/driver/fisheye/left/compressed">
+                  左侧摄像头
+                </SelectItem>
+                <SelectItem value="/driver/fisheye/right/compressed">
+                  右侧摄像头
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </CardFooter>
+        </Card>
       </div>
 
       <Card className=" backdrop-blur-xl bg-background/30">
@@ -432,59 +488,6 @@ const ControlEnd = () => {
             setAssistiveMode={setAssistiveMode}
           />
         </div>
-      </Card>
-      <Card className="overflow-hidden grow">
-        <div className="relative">
-          <video ref={videoRef} className="w-full h-auto aspect-[25/9]" />
-          <Badge
-            variant={"outline"}
-            className="absolute border-none top-0 right-0 flex flex-row gap-1 items-center text-green-600 z-10"
-          >
-            <Wifi className="w-4 h-4" />
-            <p className="text-xs">
-              延迟: <b className="">{`${latency * 1000} ms`}</b>
-            </p>
-          </Badge>
-        </div>
-
-        <CardFooter className="flex flex-row justify-between py-2 w-full">
-          <div className="flex gap-6 items-center mt-1">
-            <p>
-              控制端ID:
-              <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-                {myPeerId}
-              </code>
-            </p>
-            <ConnectionStatus connected={connected} />
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="Assistive-mode">辅助模式</Label>
-              <Switch
-                id="Assistive-mode"
-                onCheckedChange={switchChange}
-                checked={assistiveMode}
-              />
-            </div>
-          </div>
-          <Select onValueChange={switchTopic}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="选择摄像头" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="/driver/fisheye/front/compressed">
-                前置摄像头
-              </SelectItem>
-              <SelectItem value="/driver/fisheye/back/compressed">
-                后置摄像头
-              </SelectItem>
-              <SelectItem value="/driver/fisheye/left/compressed">
-                左侧摄像头
-              </SelectItem>
-              <SelectItem value="/driver/fisheye/right/compressed">
-                右侧摄像头
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </CardFooter>
       </Card>
     </div>
   );

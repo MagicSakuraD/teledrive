@@ -2,16 +2,11 @@
 import React, { useMemo } from "react";
 import {
   ComposedChart,
-  Scatter,
   CartesianGrid,
   XAxis,
   YAxis,
   ResponsiveContainer,
-  ZAxis,
   Tooltip,
-  Legend,
-  Cell,
-  Text,
   Line,
   ReferenceDot,
 } from "recharts";
@@ -32,41 +27,28 @@ interface SafetyChartProps {
   currentAcceleration?: number; // 当前加速度
 }
 
-// Color mapping for specific distance values
+// 简化的颜色映射，只需要2种颜色
 const getPointColor = (distance: number) => {
-  // 更精细的距离颜色映射
-  if (distance <= 0.2) return "#800000"; // 深红色 - 极度危险
-  if (distance <= 0.5) return "#A00000"; // 暗红色 - 高度危险
-  if (distance <= 1.0) return "#C00000"; // 亮红色 - 非常危险
-  if (distance <= 1.5) return "#E00000"; // 鲜红色 - 危险
-  if (distance <= 2.0) return "#FF0000"; // 红色 - 很近
-  if (distance <= 5.0) return "#FF4500"; // 橙红色 - 较近
-  if (distance <= 8.0) return "#FF8C00"; // 深橙色 - 近
-  if (distance <= 12.0) return "#FFD700"; // 金色 - 中等距离
-  if (distance <= 16.0) return "#ADFF2F"; // 黄绿色 - 较远
-  if (distance <= 20.0) return "#32CD32"; // 酸橙绿 - 远
-  if (distance <= 25.0) return "#00FA9A"; // 中春绿色 - 很远
-  return "#00FF7F"; // 春绿色 - 极远
+  if (distance <= 2.0) return "#FF0000"; // 红色 - 2m
+  return "#FFD700"; // 黄色 - 5m
 };
 
-const NoDataDisplay = () => {
-  return (
-    <text
-      x="50%"
-      y="50%"
-      fill="#888888"
-      textAnchor="middle"
-      dominantBaseline="middle"
-    >
-      暂无数据
-    </text>
-  );
-};
+const NoDataDisplay = () => (
+  <text
+    x="50%"
+    y="50%"
+    fill="#888888"
+    textAnchor="middle"
+    dominantBaseline="middle"
+  >
+    暂无数据
+  </text>
+);
 
 const SafetyChart: React.FC<SafetyChartProps> = ({
   safetyData,
-  title = "安全轮廓可视化",
-  description = "角度与加速度关系图（颜色表示距离）",
+  title = "安全轮廓",
+  description = "方向盘和加速度安全区域",
   currentAngle,
   currentAcceleration,
 }) => {
@@ -80,7 +62,7 @@ const SafetyChart: React.FC<SafetyChartProps> = ({
         data.push({
           angle: safetyData[i], // 方向角度（度）
           acceleration: safetyData[i + 1], // 加速度
-          distance: safetyData[i + 2], // 预测距离（用于点的颜色）
+          distance: safetyData[i + 2], // 预测距离
         });
       }
     }
@@ -88,32 +70,30 @@ const SafetyChart: React.FC<SafetyChartProps> = ({
     return data;
   }, [safetyData]);
 
-  // 按距离分组的数据（用于连线）
-  const groupedByDistance = useMemo(() => {
+  // 只保留2m和5m的数据进行分组
+  const filteredGroups = useMemo(() => {
     if (!chartData.length) return [];
 
-    // 创建距离映射表
+    // 创建距离映射表，只保留近似2m和5m的数据点
     const distanceMap = new Map();
 
-    // 对每个数据点，按距离分组
     chartData.forEach((point) => {
-      // 对距离值取整到小数点后一位，作为分组键
-      const distKey = Math.round(point.distance * 10) / 10;
-      if (!distanceMap.has(distKey)) {
-        distanceMap.set(distKey, []);
-      }
-      distanceMap.get(distKey).push(point);
-    });
+      // 对距离值进行过滤，只保留约2m和约5m的点
+      let targetDist = null;
+      if (point.distance >= 1.8 && point.distance <= 2.2) targetDist = 2;
+      else if (point.distance >= 4.8 && point.distance <= 5.2) targetDist = 5;
 
-    interface DataPoint {
-      angle: number;
-      acceleration: number;
-      distance: number;
-    }
+      if (targetDist) {
+        if (!distanceMap.has(targetDist)) {
+          distanceMap.set(targetDist, []);
+        }
+        distanceMap.get(targetDist).push(point);
+      }
+    });
 
     interface DistanceGroup {
       distance: number;
-      points: DataPoint[];
+      points: Array<{ angle: number; acceleration: number; distance: number }>;
       color: string;
     }
 
@@ -130,22 +110,10 @@ const SafetyChart: React.FC<SafetyChartProps> = ({
     return result;
   }, [chartData]);
 
-  const minDist = useMemo(
-    () =>
-      chartData.length > 0 ? Math.min(...chartData.map((d) => d.distance)) : 0,
-    [chartData]
-  );
-
-  const maxDist = useMemo(
-    () =>
-      chartData.length > 0 ? Math.max(...chartData.map((d) => d.distance)) : 0,
-    [chartData]
-  );
-
   const hasData = chartData.length > 0;
 
-  // 扩展的距离参考值
-  const distanceValues = [0.2, 0.5, 1.0, 1.5, 2.0, 5, 8, 12, 16, 20, 25, 30];
+  // 只显示2m和5m的参考值
+  const distanceValues = [2, 5];
 
   // 当前控制状态是否在图表范围内
   const isCurrentStateInRange =
@@ -157,78 +125,50 @@ const SafetyChart: React.FC<SafetyChartProps> = ({
     currentAcceleration <= 5;
 
   return (
-    <Card className="overflow-hidden grow">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              margin={{
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: 30,
-              }}
-            >
-              <CartesianGrid
-                vertical={true}
-                horizontal={true}
-                strokeDasharray="3 3"
-              />
+    // 将现有的 div 容器修改为圆形
+    <div
+      className="rounded-full overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center"
+      style={{ width: "200px", height: "200px", margin: "0 auto" }}
+    >
+      <CardContent className="p-0 w-full h-full">
+        {/* 圆形图表容器 */}
+        <div className="w-full h-full">
+          <ResponsiveContainer width="100%" height="100%" aspect={1}>
+            <ComposedChart className="pr-9 pt-3">
+              <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 type="number"
                 dataKey="angle"
                 name="角度"
                 domain={[-40, 40]}
-                label={{
-                  value: "方向（度）",
-                  position: "bottom",
-                  offset: 15,
-                }}
+                // label={{
+                //   value: "方向",
+                //   position: "bottom",
+                //   offset: -5,
+                //   fontSize: 10,
+                // }}
+                tick={{ fontSize: 8 }}
               />
               <YAxis
                 type="number"
                 dataKey="acceleration"
                 name="加速度"
                 domain={[-5, 5]}
-                label={{
-                  value: "加速度",
-                  angle: -90,
-                  position: "insideLeft",
-                  offset: -5,
-                }}
+                // label={{
+                //   value: "加速度",
+                //   angle: -90,
+                //   position: "insideLeft",
+                //   offset: 5,
+                //   fontSize: 10,
+                // }}
+                tick={{ fontSize: 8 }}
               />
-              {hasData && (
-                <ZAxis
-                  type="number"
-                  dataKey="distance"
-                  range={[20, 200]}
-                  name="距离"
-                />
-              )}
-
-              {hasData && (
-                <Tooltip
-                  cursor={{ strokeDasharray: "3 3" }}
-                  formatter={(value, name) => {
-                    if (name === "distance") return [`${value}米`, "距离"];
-                    if (name === "acceleration") return [`${value}`, "加速度"];
-                    if (name === "angle") return [`${value}°`, "角度"];
-                    return [value, name];
-                  }}
-                  labelFormatter={(label) => ""}
-                  contentStyle={{ backgroundColor: "rgba(255, 255, 255, 0.9)" }}
-                />
-              )}
 
               {!hasData && <NoDataDisplay />}
 
-              {/* 先渲染相同距离的连线 */}
+              {/* 只渲染2m和5m的轮廓线 */}
               {hasData &&
-                groupedByDistance.map((group, idx) => {
+                filteredGroups.map((group, idx) => {
                   if (group.points.length >= 2) {
                     return (
                       <Line
@@ -239,9 +179,9 @@ const SafetyChart: React.FC<SafetyChartProps> = ({
                         xAxisId={0}
                         yAxisId={0}
                         stroke={group.color}
+                        strokeWidth={2}
+                        name={`${group.distance}m`}
                         dot={false}
-                        strokeWidth={1.5}
-                        name={`距离: ${group.distance}米`}
                         connectNulls={true}
                         isAnimationActive={false}
                       />
@@ -255,47 +195,17 @@ const SafetyChart: React.FC<SafetyChartProps> = ({
                 <ReferenceDot
                   x={currentAngle}
                   y={currentAcceleration}
-                  r={6}
+                  r={5}
                   fill="#FFFFFF"
                   stroke="#000000"
-                  strokeWidth={2}
+                  strokeWidth={1.5}
                 />
               )}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-
-        <div className="mt-2 flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
-          {distanceValues.map((dist, index) => (
-            <div key={index} className="flex items-center mr-2">
-              <div
-                className="text-center h-3 w-3 rounded-full mr-1"
-                style={{ backgroundColor: getPointColor(dist) }}
-              />
-              {dist}米
-            </div>
-          ))}
-        </div>
-
-        {/* 当前加速度，角度：{currentAcceleration}，{currentAngle} */}
-        <div>
-          {isCurrentStateInRange ? (
-            <div className="text-sm text-muted-foreground">
-              当前控制状态：{currentAcceleration.toFixed(2)} m/s²，{" "}
-              {currentAngle.toFixed(2)}°
-            </div>
-          ) : (
-            currentAcceleration &&
-            currentAngle && (
-              <div className="text-sm text-muted-foreground">
-                特殊：当前控制状态：{currentAcceleration.toFixed(2)} m/s²，{" "}
-                {currentAngle.toFixed(2)}°
-              </div>
-            )
-          )}
-        </div>
       </CardContent>
-    </Card>
+    </div>
   );
 };
 

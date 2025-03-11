@@ -74,7 +74,7 @@ const Car3D: React.FC<Car3DProps> = ({
     : [];
 
   const finalQuaternion = computeFinalQuaternion(localization.orientation);
-  console.log("trajectory", trajectory);
+
   //中心线减去车辆位置
   const Rodeline = centralLines
     ? centralLines.map(
