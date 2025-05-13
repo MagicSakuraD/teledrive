@@ -15,6 +15,8 @@ import {
   bestTrajectory,
   simplifyPolygon_path,
   simplifyMarkers_predicted,
+  simplifyOdometryMsg,
+  simplifyLocalizationEstimateMsg,
 } from "@/lib/simplifyMarkers";
 
 const Car = ({ remotePeerId = "control-002" }) => {
@@ -49,6 +51,10 @@ const Car = ({ remotePeerId = "control-002" }) => {
     gear: "N",
   });
 
+  // const [receivedCamera, setReceivedCamera] = useState<string>(
+  //   "/driver/camera/image/compressed"
+  // );
+
   const [receivedCamera, setReceivedCamera] = useState<string>(
     "/driver/fisheye/front/compressed"
   );
@@ -59,6 +65,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
   // const [callStarted, setCallStarted] = useState(false);
   const [assistive_mode, setAssistiveMode] = useState(false);
+  const [delayCompensation, setDelayCompensation] = useState(false);
   const mediaConnectionRef = useRef<MediaConnection | null>(null);
   // UseRefs to store the latest images
   const avmImageRef = useRef<HTMLImageElement | null>(null);
@@ -127,8 +134,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
       debug: 2,
       config: {
         iceServers: [
-          // { urls: "turn:0.peerjs.com:3478" },
-          // { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:111.186.56.118:3478" },
           {
             urls: "turn:111.186.56.118:3478",
             username: "test",
@@ -209,6 +215,16 @@ const Car = ({ remotePeerId = "control-002" }) => {
               // Type assertion for the "assistive_mode" topic
               const assistiveMode = receivedData as boolean;
               setAssistiveMode(assistiveMode);
+              break;
+
+            case "delay_compensation":
+              // Handle delay compensation mode toggle
+              const delayCompensationState = receivedData as boolean;
+              setDelayCompensation(delayCompensationState);
+              console.log(
+                "延迟补偿状态：",
+                delayCompensationState ? "开启" : "关闭"
+              );
               break;
 
             default:
@@ -392,23 +408,24 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
       });
 
+      // 注释掉原有的定位话题订阅，因为我们现在根据 delayCompensation 状态动态切换定位话题
       // 订阅车辆位置话题/visualization/localization
-      const localizationListener = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/visualization/localization",
-        messageType: "visualization_msgs/Marker",
-      });
+      // const localizationListener = new ROSLIB.Topic({
+      //   ros: rosRef.current,
+      //   name: "/visualization/localization",
+      //   messageType: "visualization_msgs/Marker",
+      // });
 
-      localizationListener.subscribe((message: any) => {
-        if (message) {
-          if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "localization",
-              data: simplifyMarker_loc(message),
-            });
-          }
-        }
-      });
+      // localizationListener.subscribe((message: any) => {
+      //   if (message) {
+      //     if (connRef.current && connRef.current.open) {
+      //       connRef.current.send({
+      //         topic: "localization",
+      //         data: simplifyMarker_loc(message),
+      //       });
+      //     }
+      //   }
+      // });
 
       //这是我最新的源代码，把补偿时延的自车估计加上了，补偿时延后的自车定位话题是/estimated_state，消息类型是nav_msgs::Odometry，里面包括est_msg.pose.pose.position.x  est_msg.pose.pose.position.y  est_msg.pose.pose.orientation（位置和朝向）
       //订阅车辆位置话题/visualization/estimated_state
@@ -651,7 +668,6 @@ const Car = ({ remotePeerId = "control-002" }) => {
         feedbackListener.unsubscribe();
         steerListener.unsubscribe();
         obstaclesListener.unsubscribe();
-        localizationListener.unsubscribe();
         // trajListener.unsubscribe();
         // bestTrajListener.unsubscribe();
         predictedTrajListener.unsubscribe();
@@ -845,6 +861,65 @@ const Car = ({ remotePeerId = "control-002" }) => {
     }
   };
 
+  // 监听延迟补偿状态变化，切换订阅的定位话题
+  useEffect(() => {
+    if (!rosRef.current || !connected) return;
+
+    // 取消订阅之前的定位话题（如果有）
+    if (imageListenerRef.current) {
+      imageListenerRef.current.unsubscribe();
+    }
+
+    // 根据 delayCompensation 状态选择订阅不同的定位话题
+    if (delayCompensation) {
+      // 开启延迟补偿时，订阅 /estimated_state 话题
+      const estimatedStateListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/estimated_state",
+        messageType: "nav_msgs/Odometry",
+      });
+
+      estimatedStateListener.subscribe((message: any) => {
+        if (message && connRef.current && connRef.current.open) {
+          // 使用辅助函数处理 nav_msgs/Odometry 类型消息
+          connRef.current.send({
+            topic: "localization",
+            data: simplifyOdometryMsg(message),
+          });
+        }
+      });
+
+      imageListenerRef.current = estimatedStateListener;
+      console.log("已切换到延迟补偿定位话题: /estimated_state");
+    } else {
+      // 关闭延迟补偿时，从 /localization/estimation 获取定位信息
+      const localizationEstimateListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/localization/estimation",
+        messageType: "cyber_msgs/LocalizationEstimate",
+      });
+
+      localizationEstimateListener.subscribe((message: any) => {
+        if (message && connRef.current && connRef.current.open) {
+          // 使用辅助函数处理 cyber_msgs/LocalizationEstimate 类型消息
+          connRef.current.send({
+            topic: "localization",
+            data: simplifyLocalizationEstimateMsg(message),
+          });
+        }
+      });
+
+      imageListenerRef.current = localizationEstimateListener;
+      console.log("已切换到标准定位话题: /localization/estimation");
+    }
+
+    return () => {
+      if (imageListenerRef.current) {
+        imageListenerRef.current.unsubscribe();
+      }
+    };
+  }, [delayCompensation, connected]);
+
   return (
     <div className="container my-auto flex flex-row gap-3">
       <Card className="grow">
@@ -876,6 +951,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
           <p>摄像头：{receivedCamera}</p>
           <p>往返延迟：{`${latencyRTT * 1000} ms`}</p>
           <p>辅助模式：{assistive_mode ? "开" : "关"}</p>
+          <p>延迟补偿：{delayCompensation ? "开" : "关"}</p>
         </CardContent>
       </Card>
     </div>

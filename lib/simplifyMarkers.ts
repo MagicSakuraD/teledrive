@@ -142,3 +142,61 @@ export function simplifyMarkers_obs(markers: Marker[]) {
     })),
   }));
 }
+
+/**
+ * 处理 nav_msgs/Odometry 类型的消息
+ * 用于延迟补偿开启时，将 /estimated_state 话题的数据转换为统一格式
+ */
+export function simplifyOdometryMsg(message: any) {
+  return {
+    position: {
+      x: -message.pose.pose.position.x,
+      y: message.pose.pose.position.z || 0, // Swap y and z, set default to 0
+      z: message.pose.pose.position.y,
+    },
+    orientation: {
+      x: message.pose.pose.orientation.x,
+      y: message.pose.pose.orientation.z || 0, // Swap y and z, set default to 0
+      z: message.pose.pose.orientation.y,
+      w: message.pose.pose.orientation.w,
+    },
+    velocity: {
+      linear: {
+        x: message.twist.twist.linear.x,
+        y: message.twist.twist.linear.y,
+      },
+      angular: {
+        z: message.twist.twist.angular.z,
+      }
+    }
+  };
+}
+
+/**
+ * 处理 cyber_msgs/LocalizationEstimate 类型的消息
+ * 用于延迟补偿关闭时，将 /localization/estimation 话题的数据转换为统一格式
+ */
+export function simplifyLocalizationEstimateMsg(message: any) {
+  return {
+    position: {
+      x: -message.pose.position.x,
+      y: message.pose.position.z || 0, // Swap y and z, set default to 0
+      z: message.pose.position.y,
+    },
+    orientation: {
+      x: message.pose.orientation.x,
+      y: message.pose.orientation.z || 0, // Swap y and z, set default to 0 
+      z: message.pose.orientation.y,
+      w: message.pose.orientation.w,
+    },
+    velocity: {
+      linear: {
+        x: message.velocity.linear.x,
+        y: message.velocity.linear.y,
+      },
+      angular: {
+        z: message.velocity.angular.z,
+      }
+    }
+  };
+}

@@ -27,10 +27,22 @@ interface SafetyChartProps {
   currentAcceleration?: number; // 当前加速度
 }
 
-// 简化的颜色映射，只需要2种颜色
+// 更新颜色映射，支持所有5个距离
 const getPointColor = (distance: number) => {
-  if (distance <= 2.0) return "#FF0000"; // 红色 - 2m
-  return "#FFD700"; // 黄色 - 5m
+  switch (distance) {
+    case 0.2:
+      return "#b91c1c"; // 红色 - 0.2m，危险
+    case 0.5:
+      return "##f43f5e"; // rose - 0.5m，警告
+    case 1:
+      return "#ea580c"; // 橘色 - 1m，注意
+    case 2:
+      return "#84cc16"; // 绿色 - 2m，安全
+    case 5:
+      return "#22c55e"; // 绿色 - 5m，安全
+    default:
+      return ""; // 排除其他距离
+  }
 };
 
 const NoDataDisplay = () => (
@@ -70,24 +82,20 @@ const SafetyChart: React.FC<SafetyChartProps> = ({
     return data;
   }, [safetyData]);
 
-  // 只保留2m和5m的数据进行分组
+  // 更新为包含所有距离值的数据分组
   const filteredGroups = useMemo(() => {
     if (!chartData.length) return [];
 
-    // 创建距离映射表，只保留近似2m和5m的数据点
+    // 创建距离映射表，保留所有需要的距离点
     const distanceMap = new Map();
 
     chartData.forEach((point) => {
-      // 对距离值进行过滤，只保留约2m和约5m的点
-      let targetDist = null;
-      if (point.distance >= 1.8 && point.distance <= 2.2) targetDist = 2;
-      else if (point.distance >= 4.8 && point.distance <= 5.2) targetDist = 5;
-
-      if (targetDist) {
-        if (!distanceMap.has(targetDist)) {
-          distanceMap.set(targetDist, []);
+      // 更新为精确匹配枚举值
+      if ([0.2, 0.5, 1, 2, 5].includes(point.distance)) {
+        if (!distanceMap.has(point.distance)) {
+          distanceMap.set(point.distance, []);
         }
-        distanceMap.get(targetDist).push(point);
+        distanceMap.get(point.distance).push(point);
       }
     });
 
@@ -112,8 +120,8 @@ const SafetyChart: React.FC<SafetyChartProps> = ({
 
   const hasData = chartData.length > 0;
 
-  // 只显示2m和5m的参考值
-  const distanceValues = [2, 5];
+  // 更新为包含所有距离值
+  const distanceValues = [0.2, 0.5, 1, 2, 5];
 
   // 当前控制状态是否在图表范围内
   const isCurrentStateInRange =

@@ -80,6 +80,9 @@ const ControlEnd = () => {
   const [assistiveMode, setAssistiveMode] = useState(false);
   const [safetyContour, setSafetyContour] = useState<any>(null);
 
+  // 延迟补偿开关状态
+  const [delayCompensation, setDelayCompensation] = useState(false);
+
   //加速度
   const [acceleration, setAcceleration] = useState<number>(0);
   let animationFrameId: number;
@@ -94,6 +97,7 @@ const ControlEnd = () => {
       debug: 2,
       config: {
         iceServers: [
+          {urls:"stun:111.186.56.118:3478"},
           {
             urls: "turn:111.186.56.118:3478",
             username: "test",
@@ -388,6 +392,34 @@ const ControlEnd = () => {
     setAssistiveMode(checked);
   };
 
+  // 监听 delayCompensation 状态变化
+  useEffect(() => {
+    if (connRef.current) {
+      connRef.current.send({
+        topic: "delay_compensation",
+        data: delayCompensation,
+      });
+      console.log("延迟补偿状态：", delayCompensation ? "开启" : "关闭");
+    }
+  }, [delayCompensation]);
+
+  // 添加键盘事件监听器，用于空格键切换延迟补偿
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !e.repeat) {
+        // 防止按键事件重复触发
+        e.preventDefault();
+        setDelayCompensation((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   return (
     <div className="w-full min-[2460px]:w-5/6 flex flex-col gap-3 p-3 my-auto">
       <div className="flex flex-row gap-2 w-full">
@@ -451,6 +483,14 @@ const ControlEnd = () => {
                   id="Assistive-mode"
                   onCheckedChange={switchChange}
                   checked={assistiveMode}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="delay-compensation">延迟补偿</Label>
+                <Switch
+                  id="delay-compensation"
+                  onCheckedChange={(checked) => setDelayCompensation(checked)}
+                  checked={delayCompensation}
                 />
               </div>
             </div>
