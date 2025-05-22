@@ -21,6 +21,7 @@ import { WalkModel } from "./models/walk";
 import { ArrowModel } from "./models/arrow";
 import Polygon from "./models/polygon";
 import Lanes from "./models/lane";
+import ParkingSpaces from "./models/parkingspace";
 import PolygonPath from "./models/polygonPath";
 import { polygonPathType } from "./models/polygonPath";
 import HistoryTrajectory from "./models/HistoryTrajectory";
@@ -45,6 +46,7 @@ interface Car3DProps {
   centralLines: trajType[];
   boundary: trajType[];
   normalRoad: Marker[];
+  parkingSpaces: Marker[];
   ploygonPath: polygonPathType[];
   predictedPoint: pointMarker[];
   safetyContourData?: number[];
@@ -57,6 +59,7 @@ const Car3D: React.FC<Car3DProps> = ({
   centralLines,
   boundary,
   normalRoad,
+  parkingSpaces,
   ploygonPath,
   predictedPoint,
   safetyContourData,
@@ -95,13 +98,13 @@ const Car3D: React.FC<Car3DProps> = ({
       <ambientLight intensity={0.5} />
       <directionalLight color="#eff6ff" position={[5, 60, 7]} intensity={1.5} />
       <EffectComposer>
-        <BrightnessContrast brightness={0.01} contrast={0.1} />
+        {/* <BrightnessContrast brightness={0.01} contrast={0.1} /> */}
         <HueSaturation hue={0.0} saturation={0.2} />
       </EffectComposer>
       <ModelSuv
         position={[0, 0, 0]} // 车辆位置为原点
         quaternion={finalQuaternion}
-        scale={[0.8, 0.8, 0.8]}
+        scale={[0.9, 0.9, 0.9]}
       />
 
       {/* 添加安全轮廓可视化 */}
@@ -160,6 +163,10 @@ const Car3D: React.FC<Car3DProps> = ({
 
       {normalRoad && normalRoad.length > 2 && (
         <Lanes roads={normalRoad} localization={localization} />
+      )}
+
+      {parkingSpaces && (
+        <ParkingSpaces roads={parkingSpaces} localization={localization} />
       )}
       {/* {arrowObstacles.map((obstacle: Marker, index: number) => {
           const obstacleQuaternion = computeFinalQuaternion(

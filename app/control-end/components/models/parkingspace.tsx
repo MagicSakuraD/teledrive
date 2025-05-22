@@ -23,11 +23,11 @@ const Lane = React.memo(
       );
     }, [normalRoad.points, localization.position]);
 
-    return <Line points={points} color="#d4d4d4" lineWidth={3} />;
+    return <Line points={points} color="#86efac" lineWidth={2} />;
   }
 );
 
-const Lanes = React.memo(
+const ParkingSpaces = React.memo(
   ({ roads, localization }: { roads: Marker[]; localization: pointMarker }) => {
     return (
       <>
@@ -45,4 +45,4 @@ const Lanes = React.memo(
   }
 );
 
-export default Lanes;
+export default ParkingSpaces;

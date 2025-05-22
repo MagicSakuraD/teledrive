@@ -59,12 +59,13 @@ const ControlEnd = () => {
     brake: 0,
     throttle: 0,
   });
-  const [currentGear, setCurrentGear] = useState<string>("D");
+  const [currentGear, setCurrentGear] = useState<string>("N");
   // 用于保存反馈速度的 state
   const [feedbackSpeed, setFeedbackSpeed] = useState<number>(0);
 
   const [currentSteerAngle, setCurrentSteerAngle] = useState<number>(0);
   const [normalRoad, setNormalRoad] = useState<any>(null);
+  const [parkingSpaces, setParkingSpaces] = useState<any>(null);
   const [trajectory, setTrajectory] = useState<any>(null);
   const [localization, setLocalization] = useState<pointMarker | null>(null);
   const [centralLines, setCentralLines] = useState<any>(null);
@@ -97,7 +98,7 @@ const ControlEnd = () => {
       debug: 2,
       config: {
         iceServers: [
-          {urls:"stun:111.186.56.118:3478"},
+          { urls: "stun:111.186.56.118:3478" },
           {
             urls: "turn:111.186.56.118:3478",
             username: "test",
@@ -159,6 +160,13 @@ const ControlEnd = () => {
                 // 如果接收到的是道路信息
                 if (receivedData.length >= 2 && !normalRoad) {
                   setNormalRoad(receivedData); // 你可以将接收到的道路信息更新到状态中
+                }
+                break;
+
+              case "parking_spaces":
+                // 如果接收到的是停车位信息
+                if (receivedData.length >= 2 && !parkingSpaces) {
+                  setParkingSpaces(receivedData); // 你可以将接收到的停车位信息更新到状态中
                 }
                 break;
 
@@ -434,6 +442,7 @@ const ControlEnd = () => {
                 centralLines={centralLines}
                 boundary={boundary}
                 normalRoad={normalRoad}
+                parkingSpaces={parkingSpaces}
                 ploygonPath={ploygonPath}
                 predictedPoint={predictedPoint}
                 safetyContourData={safetyContour}

@@ -66,6 +66,16 @@ const Car = ({ remotePeerId = "control-002" }) => {
   // const [callStarted, setCallStarted] = useState(false);
   const [assistive_mode, setAssistiveMode] = useState(false);
   const [delayCompensation, setDelayCompensation] = useState(false);
+
+  // Ref to track the latest delayCompensation value for use in callbacks
+  const delayCompensationRef = useRef(delayCompensation);
+  useEffect(() => {
+    delayCompensationRef.current = delayCompensation;
+  }, [delayCompensation]);
+
+  // Ref：存储从 /localization/estimation 订阅到的最新消息
+  const latestEstimationRef = useRef<ROSLIB.Message | null>(null);
+
   const mediaConnectionRef = useRef<MediaConnection | null>(null);
   // UseRefs to store the latest images
   const avmImageRef = useRef<HTMLImageElement | null>(null);
@@ -109,13 +119,13 @@ const Car = ({ remotePeerId = "control-002" }) => {
         );
 
         // 更新指南线的位置，现在应该在 avmImage 上绘制
-        drawGuideLine(
-          secondImageWidth + avmimageWidth / 2, // 更新基准点位置
-          imageHeight / 2,
-          (steerAngleRef.current ?? 1) / 15.58,
-          ctx,
-          gearRef.current ?? "N"
-        );
+        // drawGuideLine(
+        //   secondImageWidth + avmimageWidth / 2, // 更新基准点位置
+        //   imageHeight / 2,
+        //   (steerAngleRef.current ?? 1) / 15.58,
+        //   ctx,
+        //   gearRef.current ?? "N"
+        // );
 
         // 如果有文字显示，也需要更新位置
         // drawText(ctx, `${passableWidthRef.current}`, secondImageWidth + avmimageWidth / 2, 40);
@@ -408,6 +418,25 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
       });
 
+      // 订阅停车场车位话题/Visualization/parking_spaces
+      const parkingSpacesListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/visualization/hdmap/parking_spaces",
+        messageType: "visualization_msgs/MarkerArray",
+      });
+
+      parkingSpacesListener.subscribe((message: any) => {
+        if (message) {
+          console.log("停车场车位", message.markers);
+          if (connRef.current && connRef.current.open) {
+            connRef.current.send({
+              topic: "parking_spaces",
+              data: simplifyRoads(message.markers),
+            });
+          }
+        }
+      });
+
       // 注释掉原有的定位话题订阅，因为我们现在根据 delayCompensation 状态动态切换定位话题
       // 订阅车辆位置话题/visualization/localization
       // const localizationListener = new ROSLIB.Topic({
@@ -447,20 +476,37 @@ const Car = ({ remotePeerId = "control-002" }) => {
       //   }
       // });
 
-      //订阅/localization/estimation中的加速度
-      const accelerationListener = new ROSLIB.Topic({
+      // ADD Unified listener for /localization/estimation
+      const unifiedLocalizationListener = new ROSLIB.Topic({
         ros: rosRef.current,
         name: "/localization/estimation",
         messageType: "cyber_msgs/LocalizationEstimate",
       });
 
-      accelerationListener.subscribe((message: any) => {
-        if (message) {
-          if (connRef.current && connRef.current.open) {
+      unifiedLocalizationListener.subscribe((message: any) => {
+        if (message && connRef.current && connRef.current.open) {
+          latestEstimationRef.current = message; // Store the latest message
+
+          if (delayCompensationRef.current) {
+            // Check ref for current delayCompensation state
+            // Send acceleration data
             connRef.current.send({
               topic: "acceleration",
-              data: message.acceleration.linear.x,
+              data: message.acceleration?.linear?.x,
             });
+            // console.log("UnifiedListener: Delay comp ON, Sent acceleration:", message.acceleration?.linear?.x);
+          } else {
+            // Send localization data (simplified)
+            connRef.current.send({
+              topic: "localization",
+              data: simplifyLocalizationEstimateMsg(message),
+            });
+
+            connRef.current.send({
+              topic: "acceleration",
+              data: message.acceleration?.linear?.x,
+            });
+            // console.log("UnifiedListener: Delay comp OFF, Sent localization:", simplifyLocalizationEstimateMsg(message));
           }
         }
       });
@@ -667,6 +713,8 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
         feedbackListener.unsubscribe();
         steerListener.unsubscribe();
+        roadListener.unsubscribe(); // Assuming roadListener was added and needs cleanup
+        unifiedLocalizationListener.unsubscribe(); // Cleanup for the new unified listener
         obstaclesListener.unsubscribe();
         // trajListener.unsubscribe();
         // bestTrajListener.unsubscribe();
@@ -865,58 +913,43 @@ const Car = ({ remotePeerId = "control-002" }) => {
   useEffect(() => {
     if (!rosRef.current || !connected) return;
 
-    // 取消订阅之前的定位话题（如果有）
-    if (imageListenerRef.current) {
-      imageListenerRef.current.unsubscribe();
-    }
+    let estimatedStateListener: ROSLIB.Topic | null = null;
 
-    // 根据 delayCompensation 状态选择订阅不同的定位话题
+    // According to delayCompensation state, subscribe to /estimated_state if true
     if (delayCompensation) {
-      // 开启延迟补偿时，订阅 /estimated_state 话题
-      const estimatedStateListener = new ROSLIB.Topic({
+      // When delay compensation is ON, subscribe to /estimated_state topic
+      estimatedStateListener = new ROSLIB.Topic({
         ros: rosRef.current,
         name: "/estimated_state",
-        messageType: "nav_msgs/Odometry",
+        messageType: "nav_msgs/Odometry", // Ensure this type is correct
       });
 
       estimatedStateListener.subscribe((message: any) => {
         if (message && connRef.current && connRef.current.open) {
-          // 使用辅助函数处理 nav_msgs/Odometry 类型消息
+          // Use helper function to process nav_msgs/Odometry type messages
           connRef.current.send({
-            topic: "localization",
-            data: simplifyOdometryMsg(message),
+            topic: "localization", // Still send as "localization"
+            data: simplifyOdometryMsg(message), // Ensure simplifyOdometryMsg is defined
           });
         }
       });
-
-      imageListenerRef.current = estimatedStateListener;
-      console.log("已切换到延迟补偿定位话题: /estimated_state");
+      console.log(
+        "Switched to delay compensation localization topic: /estimated_state"
+      );
     } else {
-      // 关闭延迟补偿时，从 /localization/estimation 获取定位信息
-      const localizationEstimateListener = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/localization/estimation",
-        messageType: "cyber_msgs/LocalizationEstimate",
-      });
-
-      localizationEstimateListener.subscribe((message: any) => {
-        if (message && connRef.current && connRef.current.open) {
-          // 使用辅助函数处理 cyber_msgs/LocalizationEstimate 类型消息
-          connRef.current.send({
-            topic: "localization",
-            data: simplifyLocalizationEstimateMsg(message),
-          });
-        }
-      });
-
-      imageListenerRef.current = localizationEstimateListener;
-      console.log("已切换到标准定位话题: /localization/estimation");
+      // When delay compensation is OFF, localization/acceleration from /localization/estimation
+      // is handled by unifiedLocalizationListener.
+      // No specific subscription needed here for that case.
+      console.log(
+        "Delay compensation OFF: using /localization/estimation (via unified listener)"
+      );
+      // The 'if (connRef.current && ... latestEstimationRef.current)' block previously here is removed
+      // as its logic is now part of unifiedLocalizationListener.
     }
 
     return () => {
-      if (imageListenerRef.current) {
-        imageListenerRef.current.unsubscribe();
-      }
+      // Cleanup: unsubscribe from the定位 topic
+      estimatedStateListener?.unsubscribe();
     };
   }, [delayCompensation, connected]);
 
