@@ -86,6 +86,12 @@ const ControlEnd = () => {
 
   //加速度
   const [acceleration, setAcceleration] = useState<number>(0);
+
+  // 摄像头选择状态
+  const [selectedCamera, setSelectedCamera] = useState<string>(
+    "/driver/fisheye/front/compressed"
+  );
+
   let animationFrameId: number;
 
   useEffect(() => {
@@ -189,7 +195,7 @@ const ControlEnd = () => {
 
               case "acceleration":
                 // 如果接收到的是加速度信息
-                setAcceleration(receivedData);
+                setAcceleration(receivedData); // 确保有默认值
                 break;
 
               case "obstacles":
@@ -355,6 +361,7 @@ const ControlEnd = () => {
   }, [axes, currentGear]); // 依赖数组中监听 axes 和 currentGear 的变化
 
   const switchTopic = (newTopic: string) => {
+    setSelectedCamera(newTopic);
     if (connRef.current) {
       connRef.current.send({ topic: "fisheye", data: newTopic });
     }
@@ -411,6 +418,33 @@ const ControlEnd = () => {
     }
   }, [delayCompensation]);
 
+  // 监听挡位变化，自动切换摄像头
+  useEffect(() => {
+    let newCamera: string;
+
+    switch (currentGear) {
+      case "R":
+        newCamera = "/driver/fisheye/back/compressed";
+        break;
+      case "D":
+        newCamera = "/driver/fisheye/front/compressed";
+        break;
+      default:
+        // P档和N档保持当前摄像头不变
+        return;
+    }
+
+    // 只在摄像头需要切换时才更新
+    if (newCamera !== selectedCamera) {
+      setSelectedCamera(newCamera);
+      // 同时发送切换命令到车端
+      if (connRef.current) {
+        connRef.current.send({ topic: "fisheye", data: newCamera });
+      }
+      console.log(`挡位切换到${currentGear}，自动切换摄像头:`, newCamera);
+    }
+  }, [currentGear, selectedCamera]);
+
   // 添加键盘事件监听器，用于空格键切换延迟补偿
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -452,11 +486,11 @@ const ControlEnd = () => {
                 variant={"outline"}
                 className="absolute border-none bottom-0 right-0 z-10"
               >
-                <SafetyChart
+                {/* <SafetyChart
                   safetyData={safetyContour}
                   currentAngle={currentSteerAngle / -15.58} // 转换方向盘角度
                   currentAcceleration={acceleration}
-                />
+                /> */}
               </Badge>
             </>
           )}
@@ -503,7 +537,7 @@ const ControlEnd = () => {
                 />
               </div>
             </div>
-            <Select onValueChange={switchTopic}>
+            <Select value={selectedCamera} onValueChange={switchTopic}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="选择摄像头" />
               </SelectTrigger>
@@ -535,6 +569,7 @@ const ControlEnd = () => {
             setCurrentGear={setCurrentGear}
             feedbackSpeed={feedbackSpeed}
             setAssistiveMode={setAssistiveMode}
+            currentAcceleration={acceleration}
           />
         </div>
       </Card>

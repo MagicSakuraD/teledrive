@@ -33,6 +33,7 @@ interface GamepadProps {
   setCurrentGear: React.Dispatch<React.SetStateAction<string>>;
   feedbackSpeed: number;
   setAssistiveMode: React.Dispatch<React.SetStateAction<boolean>>;
+  currentAcceleration: number;
 }
 
 const Gamepad: React.FC<GamepadProps> = ({
@@ -42,6 +43,7 @@ const Gamepad: React.FC<GamepadProps> = ({
   setCurrentGear,
   feedbackSpeed,
   setAssistiveMode,
+  currentAcceleration,
 }) => {
   const [gamepad, setGamepad] = useState<Gamepad | null>(null);
   const [isGamepadSupported, setIsGamepadSupported] = useState<boolean>(true);

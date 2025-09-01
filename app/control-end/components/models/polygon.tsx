@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useRef } from "react";
 import { Shape } from "@react-three/drei";
 import { Marker } from "@/lib/simplifyMarkers";
 import * as THREE from "three";
@@ -17,7 +17,20 @@ interface PolygonProps {
 }
 
 const Polygon: React.FC<PolygonProps> = ({ markers, localization }) => {
+  // 用ref存储创建的几何体和材质，以便清理
+  const geometriesRef = useRef<THREE.ExtrudeGeometry[]>([]);
+  const materialsRef = useRef<THREE.MeshBasicMaterial[]>([]);
+
   const shapes = useMemo(() => {
+    // 清理之前创建的资源
+    geometriesRef.current.forEach((geometry) => {
+      geometry.dispose();
+    });
+    materialsRef.current.forEach((material) => {
+      material.dispose();
+    });
+    geometriesRef.current = [];
+    materialsRef.current = [];
     return markers
       .map((marker, index) => {
         const points = marker.points?.map((point) => {
@@ -50,33 +63,46 @@ const Polygon: React.FC<PolygonProps> = ({ markers, localization }) => {
           const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
 
           // 旋转几何体使其垂直于地面
-          geometry.rotateX(-Math.PI / 2 + 2 * Math.PI); // 绕x轴旋转-90度
-          // 绕y轴旋转所需的角度（例如45度）
-          geometry.rotateY(-Math.PI / 2 - Math.PI / 2); // 绕y轴旋转45度
+          geometry.rotateX(-Math.PI / 2); // 绕x轴旋转-90度
+          geometry.rotateY(-Math.PI); // 绕y轴旋转180度
+          geometry.rotateZ(-Math.PI); // 绕z轴旋转180度
 
-          geometry.rotateZ(-Math.PI);
+          // 创建材质
+          const material = new THREE.MeshBasicMaterial({
+            color: new THREE.Color(
+              marker.color?.r || 1,
+              marker.color?.g || 0,
+              marker.color?.b || 0
+            ),
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.5,
+          });
 
-          return (
-            <mesh key={index} geometry={geometry}>
-              <meshBasicMaterial
-                color={
-                  new THREE.Color(
-                    marker.color?.r || 1,
-                    marker.color?.g || 0,
-                    marker.color?.b || 0
-                  )
-                }
-                side={THREE.DoubleSide}
-                transparent={true}
-                opacity={0.5}
-              />
-            </mesh>
-          );
+          // 存储到ref中以便后续清理
+          geometriesRef.current.push(geometry);
+          materialsRef.current.push(material);
+
+          return <mesh key={index} geometry={geometry} material={material} />;
         }
         return null;
       })
       .filter(Boolean);
   }, [markers, localization]);
+
+  // 组件卸载时清理所有资源
+  useEffect(() => {
+    return () => {
+      geometriesRef.current.forEach((geometry) => {
+        geometry.dispose();
+      });
+      materialsRef.current.forEach((material) => {
+        material.dispose();
+      });
+      geometriesRef.current = [];
+      materialsRef.current = [];
+    };
+  }, []);
 
   // 如果没有有效的形状，不渲染任何内容
   if (shapes.length === 0) {

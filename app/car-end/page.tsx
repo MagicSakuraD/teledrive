@@ -33,6 +33,36 @@ const Car = ({ remotePeerId = "control-002" }) => {
   const passableLengthRef = useRef<string>("length: 0");
   const gearRef = useRef<string | null>("N");
 
+  // 节流控制
+  const throttleTimers = useRef<{ [key: string]: number }>({});
+  const THROTTLE_INTERVALS = {
+    feedback_sp: 100, // 速度反馈：100ms (10Hz)
+    feedback_steer: 100, // 转角反馈：100ms (10Hz)
+    localization: 100, // 定位数据：100ms (10Hz)
+    acceleration: 200, // 加速度数据：200ms (5Hz)
+    obstacles: 100, // 障碍物：100ms (10Hz)
+    road: 10000, // 道路：10000ms (0.1Hz)
+    parking_spaces: 10000, // 停车位：10000ms (0.1Hz)
+    safetyContour: 200, // 安全轮廓：200ms (5Hz)
+    path_boundary: 500, // 路径边界：500ms (2Hz)
+  };
+
+  // 节流发送函数
+  const throttledSend = (topic: string, data: any) => {
+    if (!connRef.current || !connRef.current.open) return;
+
+    const interval = THROTTLE_INTERVALS[topic] || 100; // 默认100ms
+    const now = Date.now();
+
+    if (
+      !throttleTimers.current[topic] ||
+      now - throttleTimers.current[topic] >= interval
+    ) {
+      throttleTimers.current[topic] = now;
+      connRef.current.send({ topic, data });
+    }
+  };
+
   // 状态来存储延迟
   const [latencyRTT, setLatencyRTT] = useState<number>(0);
 
@@ -371,10 +401,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
           }
 
           if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "feedback_sp",
-              data: message.speed_cms,
-            });
+            throttledSend("feedback_sp", message.speed_cms);
           }
         }
       });
@@ -392,11 +419,22 @@ const Car = ({ remotePeerId = "control-002" }) => {
           steerAngleRef.current =
             parseFloat(message.SteerAngle.toFixed(2)) * -1;
           if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "feedback_steer",
-              data: message.SteerAngle,
-            });
+            throttledSend("feedback_steer", message.SteerAngle);
           }
+        }
+      });
+
+      // 订阅新的加速度话题 /vehicle/acceleration
+      const accelerationListener = new ROSLIB.Topic({
+        ros: rosRef.current,
+        name: "/vehicle/acceleration",
+        messageType: "std_msgs/Float32",
+      });
+
+      accelerationListener.subscribe((message: any) => {
+        if (message && connRef.current && connRef.current.open) {
+          console.log("收到新加速度话题数据:", message.data);
+          throttledSend("acceleration", message.data);
         }
       });
 
@@ -410,10 +448,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
       roadListener.subscribe((message: any) => {
         if (message) {
           if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "road",
-              data: simplifyRoads(message.markers),
-            });
+            throttledSend("road", simplifyRoads(message.markers));
           }
         }
       });
@@ -429,10 +464,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
         if (message) {
           console.log("停车场车位", message.markers);
           if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "parking_spaces",
-              data: simplifyRoads(message.markers),
-            });
+            throttledSend("parking_spaces", simplifyRoads(message.markers));
           }
         }
       });
@@ -490,22 +522,18 @@ const Car = ({ remotePeerId = "control-002" }) => {
           if (delayCompensationRef.current) {
             // Check ref for current delayCompensation state
             // Send acceleration data
-            connRef.current.send({
-              topic: "acceleration",
-              data: message.acceleration?.linear?.x,
-            });
+            // 注释掉：旧版本从 /localization/estimation 获取加速度数据
+            // throttledSend("acceleration", message.acceleration?.linear?.x);
             // console.log("UnifiedListener: Delay comp ON, Sent acceleration:", message.acceleration?.linear?.x);
           } else {
             // Send localization data (simplified)
-            connRef.current.send({
-              topic: "localization",
-              data: simplifyLocalizationEstimateMsg(message),
-            });
+            throttledSend(
+              "localization",
+              simplifyLocalizationEstimateMsg(message)
+            );
 
-            connRef.current.send({
-              topic: "acceleration",
-              data: message.acceleration?.linear?.x,
-            });
+            // 注释掉：旧版本从 /localization/estimation 获取加速度数据
+            // throttledSend("acceleration", message.acceleration?.linear?.x);
             // console.log("UnifiedListener: Delay comp OFF, Sent localization:", simplifyLocalizationEstimateMsg(message));
           }
         }
@@ -522,10 +550,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
         if (message) {
           // console.log("障碍物", message.markers);
           if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "obstacles",
-              data: simplifyMarkers_obs(message.markers),
-            });
+            throttledSend("obstacles", simplifyMarkers_obs(message.markers));
           }
         }
       });
@@ -550,22 +575,22 @@ const Car = ({ remotePeerId = "control-002" }) => {
       // });
 
       //订阅车辆轨迹predicted_trajectory_markers
-      const predictedTrajListener = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/predicted_trajectory_markers",
-        messageType: "visualization_msgs/MarkerArray",
-      });
+      // const predictedTrajListener = new ROSLIB.Topic({
+      //   ros: rosRef.current,
+      //   name: "/predicted_trajectory_markers",
+      //   messageType: "visualization_msgs/MarkerArray",
+      // });
 
-      predictedTrajListener.subscribe((message: any) => {
-        if (message) {
-          if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "traj",
-              data: simplifyMarkers_tarj(message.markers),
-            });
-          }
-        }
-      });
+      // predictedTrajListener.subscribe((message: any) => {
+      //   if (message) {
+      //     if (connRef.current && connRef.current.open) {
+      //       connRef.current.send({
+      //         topic: "traj",
+      //         data: simplifyMarkers_tarj(message.markers),
+      //       });
+      //     }
+      //   }
+      // });
 
       // 订阅车辆最好轨迹/visualization/best_trajectories
       // const bestTrajListener = new ROSLIB.Topic({
@@ -586,22 +611,22 @@ const Car = ({ remotePeerId = "control-002" }) => {
       // });
 
       //订阅参考中心线/visualization/reference_central_lines
-      const referenceCentralLinesListener = new ROSLIB.Topic({
-        ros: rosRef.current,
-        name: "/visualization/reference_central_lines",
-        messageType: "visualization_msgs/MarkerArray",
-      });
+      // const referenceCentralLinesListener = new ROSLIB.Topic({
+      //   ros: rosRef.current,
+      //   name: "/visualization/reference_central_lines",
+      //   messageType: "visualization_msgs/MarkerArray",
+      // });
 
-      referenceCentralLinesListener.subscribe((message: any) => {
-        if (message) {
-          if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "CentralLines",
-              data: simplifyMarkers_tarj(message.markers),
-            });
-          }
-        }
-      });
+      // referenceCentralLinesListener.subscribe((message: any) => {
+      //   if (message) {
+      //     if (connRef.current && connRef.current.open) {
+      //       connRef.current.send({
+      //         topic: "CentralLines",
+      //         data: simplifyMarkers_tarj(message.markers),
+      //       });
+      //     }
+      //   }
+      // });
 
       // 话题名：/safety_contour_data  消息类型：std_msgs::Float32MultiArray
       // data里面以3个数为一个单位，第一个转角，第二个加速度，第三个是预测距离
@@ -616,10 +641,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
       safetyContourListener.subscribe((message: any) => {
         if (message) {
           if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "safetyContour",
-              data: message.data,
-            });
+            throttledSend("safetyContour", message.data);
           }
         }
       });
@@ -634,10 +656,10 @@ const Car = ({ remotePeerId = "control-002" }) => {
       pathBoundaryListener.subscribe((message: any) => {
         if (message) {
           if (connRef.current && connRef.current.open) {
-            connRef.current.send({
-              topic: "path_boundary",
-              data: simplifyMarkers_boundary(message.markers),
-            });
+            throttledSend(
+              "path_boundary",
+              simplifyMarkers_boundary(message.markers)
+            );
           }
         }
       });
@@ -713,14 +735,15 @@ const Car = ({ remotePeerId = "control-002" }) => {
         }
         feedbackListener.unsubscribe();
         steerListener.unsubscribe();
+        accelerationListener.unsubscribe(); // 清理新的加速度监听器
         roadListener.unsubscribe(); // Assuming roadListener was added and needs cleanup
         unifiedLocalizationListener.unsubscribe(); // Cleanup for the new unified listener
         obstaclesListener.unsubscribe();
         // trajListener.unsubscribe();
         // bestTrajListener.unsubscribe();
-        predictedTrajListener.unsubscribe();
+        // predictedTrajListener.unsubscribe();
         safetyContourListener.unsubscribe();
-        referenceCentralLinesListener.unsubscribe();
+        // referenceCentralLinesListener.unsubscribe();
         cancelAnimationFrame(animationRTTId);
       };
     }
@@ -824,7 +847,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
 
       const brakeTopic = new ROSLIB.Topic({
         ros: rosRef.current,
-        name: "/rock_can/brake_command",
+        name: "/rock_can/temp_brake_command",
         messageType: "cyber_msgs/brake_cmd",
       });
 
@@ -927,10 +950,7 @@ const Car = ({ remotePeerId = "control-002" }) => {
       estimatedStateListener.subscribe((message: any) => {
         if (message && connRef.current && connRef.current.open) {
           // Use helper function to process nav_msgs/Odometry type messages
-          connRef.current.send({
-            topic: "localization", // Still send as "localization"
-            data: simplifyOdometryMsg(message), // Ensure simplifyOdometryMsg is defined
-          });
+          throttledSend("localization", simplifyOdometryMsg(message)); // Still send as "localization"
         }
       });
       console.log(

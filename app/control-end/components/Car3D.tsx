@@ -91,15 +91,28 @@ const Car3D: React.FC<Car3DProps> = ({
     : [];
 
   return (
-    <Canvas className="bg-gray-900 rounded-md" frameloop="demand">
+    <Canvas
+      className="bg-gray-900 rounded-md"
+      frameloop="demand"
+      gl={{
+        preserveDrawingBuffer: false,
+        powerPreference: "high-performance",
+        antialias: false, // 关闭抗锯齿减少内存占用
+        alpha: false,
+        depth: true,
+        stencil: false,
+      }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       {/* <PerspectiveCamera makeDefault position={[0, 20, -4]} />
       <OrbitControls target={[0, 0, 0]} /> */}
       <FollowCamera quaternion={finalQuaternion} />
       <ambientLight intensity={0.5} />
       <directionalLight color="#eff6ff" position={[5, 60, 7]} intensity={1.5} />
+      {/* 暂时禁用后期处理效果以减少内存占用 */}
       <EffectComposer>
         {/* <BrightnessContrast brightness={0.01} contrast={0.1} /> */}
-        <HueSaturation hue={0.0} saturation={0.2} />
+        <HueSaturation hue={0.0} saturation={0.1} />
       </EffectComposer>
       <ModelSuv
         position={[0, 0, 0]} // 车辆位置为原点
